@@ -74,6 +74,7 @@ def getMythogenome(fastaFile):
 # @geneName, name of the column we are checking
 def correctMinMaxInputError(val, columnName, mtName, geneName):
     if not re.match("^[0-9]*$", val):
+        val = val.replace(",", "").replace(".", "")
         res = re.findall(r'\b\d+\b', val)[0]
         log = "A correction have been made  on " + mtName + " : " + geneName + " on the column : " + columnName + "\n" + val + " was corrected in : " + res
         print(log)
