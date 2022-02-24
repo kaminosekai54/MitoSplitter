@@ -1,0 +1,15 @@
+Name,Type,Minimum,Maximum,Length,Direction
+CYTB CDS,CDS,178,1311,1134,forward
+CYTB gene,gene,178,1311,1134,forward
+tRNA-Ser,tRNA,1318,1388,71,forward
+gene,gene,1318,1388,71,forward
+ND1 CDS,CDS,1406,2353,948,reverse
+ND1 gene,gene,1406,2353,948,reverse
+tRNA-Leu,tRNA,2357,2421,65,reverse
+gene,gene,2357,2421,65,reverse
+16S rRNA,rRNA,2422,3724,1303,reverse
+gene,gene,2422,3724,1303,reverse
+tRNA-Val,tRNA,3725,3795,71,reverse
+gene,gene,3725,3795,71,reverse
+12S rRNA,rRNA,3794,4607,814,reverse
+gene,gene,3794,4607,814,reverse

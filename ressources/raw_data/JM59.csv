@@ -1,0 +1,30 @@
+Name,Type,Minimum,Maximum,Length,Direction
+tRNA-Ile,tRNA,1,68,68,forward
+tRNA-Gln,tRNA,66,134,69,reverse
+tRNA-Met,tRNA,142,207,66,forward
+ND2 CDS,CDS,208,1233,1026,forward
+tRNA-Trp,tRNA,1235,1305,71,forward
+tRNA-Cys,tRNA,1298,1365,68,reverse
+tRNA-Tyr,tRNA,1399,1468,70,reverse
+COX1 CDS,CDS,<1470,3011,>1542,forward
+tRNA-Leu,tRNA,3016,3086,71,forward
+COX2 CDS,CDS,3088,3807,720,forward
+tRNA-Lys,tRNA,3773,3843,71,forward
+tRNA-Asp,tRNA,3844,3907,64,forward
+ATP8 CDS,CDS,3908,4066,159,forward
+ATP6 CDS,CDS,4060,4740,681,forward
+COX3 CDS,CDS,4743,5531,789,forward
+trnG(gga) tRNA,tRNA,5536,5600,65,forward
+ND3 CDS,CDS,5601,5954,354,forward
+tRNA-Ala,tRNA,5953,6017,65,forward
+tRNA-Arg,tRNA,6017,6081,65,forward
+trnN(aac) tRNA,tRNA,6092,6157,66,forward
+tRNA-Ser,tRNA,6158,6224,67,forward
+tRNA-Glu,tRNA,6227,6295,69,forward
+tRNA-Phe,tRNA,6296,6362,67,reverse
+ND5 CDS,CDS,6364,8094,1731,reverse
+tRNA-His,tRNA,8095,8163,69,reverse
+ND4 CDS,CDS,8176,9513,1338,reverse
+ND4L CDS,CDS,9507,9791,285,reverse
+tRNA-Thr,tRNA,9794,9857,64,forward
+tRNA-Pro,tRNA,9858,9923,66,reverse
