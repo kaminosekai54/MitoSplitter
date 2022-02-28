@@ -4,8 +4,6 @@ from functions import *
 
 
 def main():
-    setup()
-    writeLog("./logs/", "Starting treatement",firstTime=True)
     run()
 
 
