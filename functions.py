@@ -135,7 +135,7 @@ def getMitogenome(fastaFile):
         mitogenomeName = fastaFile[fastaFile.rfind("/")+1:].replace(".fasta","").replace(" ", "")
         if "_" in mitogenomeName:
             mitogenomeName= mitogenomeName[0:mitogenomeName.find("_")]
-        return (mitogenomeName, record.seq, record.id)
+        return (str.upper(mitogenomeName), record.seq, record.id)
 
 # function correctMinMaxInputError,
 # This function will return only a number extracted from the string in param
@@ -216,7 +216,7 @@ def checkSuperposition(start, prevEnd, mitogenomeName, prevName, name):
 def extractSeqFromCSV(csv, fasta):
     df = pd.read_csv(csv, sep=",")
     df = df[df[settings["typeColName"]] != "gene"]
-    df[settings["nameColName"]] = df[settings["nameColName"]].str.replace("\s(.*)", "")
+    df[settings["nameColName"]] = df[settings["nameColName"]].str.replace("\s(.*)", "").str.upper()
 
     mitogenomeName, mitogenomeSeq, mitogenomeId = getMitogenome(fasta)
     Subseq = []
@@ -264,7 +264,7 @@ def extractSeqFromCSV(csv, fasta):
 def getMitogenomeFromGBFile(gbFile):
     with open(gbFile) as gb:
         record = GenBank.read(gb)
-        return (record.organism.replace(" ", ""), record.sequence, record.accession[0])
+        return (str.upper(record.organism.replace(" ", "-")), record.sequence, record.accession[0])
 
 
 #extractSeqFromGBFile
@@ -296,6 +296,7 @@ def extractSeqFromGBFile(gbFile):
                     start = correctMinMaxInputError(str(gene.location.start),"Minimum",mitogenomeName,name)
                     end= correctMinMaxInputError(str(gene.location.end), "Maximum",mitogenomeName,name)
                     seq = mitogenomeSeq [start:end]
+                    name = str.upper(name)
                     record = SeqRecord(Seq(seq), id=mitogenomeName, name=name, description="")
                     listRecords.append(record)
                     listGene.append(name)
@@ -348,9 +349,8 @@ def generateAccessionIDSummary(mitogenomeDict, csvPath= settings["csvResultPath"
 # run,
 # this function is the main function to run
 def run():
-    
-    writeLog("Starting treatement", firstTime=True)
     setup()
+    writeLog("Starting treatement", firstTime=True)
     mitogenomeDict = {}
     fastaFiles = getFASTAFiles()
     csvFiles = getCSVFiles()
@@ -373,5 +373,6 @@ def run():
     generateAccessionIDSummary(mitogenomeDict)
 
 ################################################################################
-# initialisation of global variable
+# initialisation of global variable and environement
+setup()
 geneDict = getGeneDict()
