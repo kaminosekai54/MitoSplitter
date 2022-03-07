@@ -132,10 +132,13 @@ def getLengthInGeneDict(gene, mitogenomeName):
 #@fastafile, the fasta fle containing the mitogenome
 def getMitogenome(fastaFile):
     for record in SeqIO.parse(fastaFile, "fasta"):
-        mitogenomeName = fastaFile[fastaFile.rfind("/")+1:].replace(".fasta","").replace(" ", "")
+        mitogenomeName = fastaFile[fastaFile.rfind("/")+1:].replace(".fasta","")
         if "_" in mitogenomeName:
             mitogenomeName= mitogenomeName[0:mitogenomeName.find("_")]
-        return (str.upper(mitogenomeName), record.seq, record.id)
+
+        if " " in mitogenomeName:
+            mitogenomeName = mitogenomeName.replace(mitogenomeName[0], str.upper(mitogenomeNmae[0]), 1).replace(" ", "-")
+        return (mitogenomeName, record.seq, record.id)
 
 # function correctMinMaxInputError,
 # This function will return only a number extracted from the string in param
@@ -165,6 +168,9 @@ def correctMinMaxInputError(val, columnName, mtName, geneName):
 
 def writeRecords(listRecords, mtName, destinationPath = settings["classicFastaResultPath"], destinationPath2 = settings["genesFastaResultPath"]):
     # writing the classic fasta file
+    log = "Writing classic fasta file for " + mtName
+    print(log)
+    writeLog(log)
     with open(destinationPath + mtName + "_classique.fasta", "w") as file:
         writer = SeqIO.FastaIO.FastaWriter(file)
         writer.write_file(listRecords)
@@ -186,6 +192,8 @@ def writeRecords(listRecords, mtName, destinationPath = settings["classicFastaRe
             geneDict[record.name].append((record.id, record.seq, len(record.seq)))
 
             file.close()
+
+
 #checkSuperposition
 # this function check if their is a overlaping betwing two sequence position
 #@param
@@ -214,9 +222,12 @@ def checkSuperposition(start, prevEnd, mitogenomeName, prevName, name):
 # @csv, the csv file
 # @fasta, the fastafile
 def extractSeqFromCSV(csv, fasta):
+    log = "Starting extraction for " + csv
+    print(log)
+    writeLog(log)
     df = pd.read_csv(csv, sep=",")
     df = df[df[settings["typeColName"]] != "gene"]
-    df[settings["nameColName"]] = df[settings["nameColName"]].str.replace("\s(.*)", "").str.upper()
+    df[settings["nameColName"]] = df[settings["nameColName"]].str.replace("\s(.*)", "")
 
     mitogenomeName, mitogenomeSeq, mitogenomeId = getMitogenome(fasta)
     Subseq = []
@@ -264,7 +275,11 @@ def extractSeqFromCSV(csv, fasta):
 def getMitogenomeFromGBFile(gbFile):
     with open(gbFile) as gb:
         record = GenBank.read(gb)
-        return (str.upper(record.organism.replace(" ", "-")), record.sequence, record.accession[0])
+        mitogenomeName = record.organism
+        if " " in mitogenomeName:
+            mitogenomeName = mitogenomeName.replace(mitogenomeName[0], str.upper(mitogenomeName[0]), 1).replace(" ", "-")
+
+        return (mitogenomeName, record.sequence, record.accession[0])
 
 
 #extractSeqFromGBFile
@@ -273,6 +288,9 @@ def getMitogenomeFromGBFile(gbFile):
 # @param
 # @gbFile, the genbank file to deal with
 def extractSeqFromGBFile(gbFile):
+    log = "Starting extraction for " + gbFile
+    print(log)
+    writeLog(log)
     mitogenomeName, mitogenomeSeq, accessionID = getMitogenomeFromGBFile(gbFile)
     listGene = []
     listRecords = []
@@ -311,7 +329,14 @@ def extractSeqFromGBFile(gbFile):
     writeRecords(listRecords,mitogenomeName)
 
     if gbFile[gbFile.rfind("/")+1:-3] != mitogenomeName:
-        os.rename(gbFile, gbFile[:gbFile.rfind("/")+1] + mitogenomeName+ ".gb")
+        newName = gbFile[:gbFile.rfind("/")+1] + mitogenomeName+ ".gb"
+        if os.path.isfile(newName):
+            i = 2
+            while os.path.isfile(newName):
+                newName = gbFile[:gbFile.rfind("/")+1] + mitogenomeName+ "_" + str(i) + ".gb"
+                i+=1
+
+        os.rename(gbFile, newName)
 
     return (mitogenomeName, accessionID )
 
@@ -352,6 +377,7 @@ def run():
     setup()
     writeLog("Starting treatement", firstTime=True)
     mitogenomeDict = {}
+    accessionDict = {}
     fastaFiles = getFASTAFiles()
     csvFiles = getCSVFiles()
     gbFiles = getGBFiles()
@@ -364,13 +390,26 @@ def run():
     for c, f in couple:
         mitogenomeName, accessionID = extractSeqFromCSV(settings["rawFilePath"] + c, settings["rawFilePath"] + f)
         if mitogenomeName not in mitogenomeDict.keys(): mitogenomeDict[mitogenomeName] = accessionID
+        if mitogenomeName not in accessionDict.keys(): accessionDict[mitogenomeName] = accessionID
     for file in gbFiles:
         mitogenomeName, accessionID = extractSeqFromGBFile(settings["rawFilePath"] +file)
         if mitogenomeName not in mitogenomeDict.keys(): mitogenomeDict[mitogenomeName] = accessionID
-    
+        if mitogenomeName not in accessionDict.keys(): 
+            accessionDict[mitogenomeName] = accessionID
+        else:
+            newName = mitogenomeName
+            i= 2
+            while newName in accessionDict.keys():
+                newName = mitogenomeName +"_" + str(i)
+                i+=1
+            accessionDict[newName] = accessionID
+
     generatePresenceSummary(mitogenomeDict)
     generateLengthSummary(mitogenomeDict)
-    generateAccessionIDSummary(mitogenomeDict)
+    generateAccessionIDSummary(accessionDict)
+    print("Finish")
+
+    writeLog("Finish")
 
 ################################################################################
 # initialisation of global variable and environement
