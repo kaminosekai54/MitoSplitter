@@ -40,7 +40,7 @@ def renameGBFile(gbFile):
         record = GenBank.read(gb)
         mitogenomeName = record.organism
         if " " in mitogenomeName:
-            mitogenomeName = mitogenomeName.replace(mitogenomeName[0], str.upper(mitogenomeName[0]), 1).replace(" ", "-")
+            mitogenomeName = mitogenomeName.replace(mitogenomeName[0], str.upper(mitogenomeName[0]), 1).replace(mitogenomeName[1:], str.lower(mitogenomeName[1:]), 1).replace(" ", "-")
 
     if gbFile[gbFile.rfind("/")+1:-3] != mitogenomeName:
         newName = gbFile[:gbFile.rfind("/")+1] + mitogenomeName+ ".gb"

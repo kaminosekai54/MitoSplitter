@@ -137,7 +137,7 @@ def getMitogenome(fastaFile):
             mitogenomeName= mitogenomeName[0:mitogenomeName.find("_")]
 
         if " " in mitogenomeName:
-            mitogenomeName = mitogenomeName.replace(mitogenomeName[0], str.upper(mitogenomeNmae[0]), 1).replace(" ", "-")
+            mitogenomeName = mitogenomeName.replace(mitogenomeName[0], str.upper(mitogenomeNmae[0]), 1).replace(mitogenomeName[1:], str.lower(mitogenomeName[1:]), 1).replace(" ", "-")
         return (mitogenomeName, record.seq, record.id)
 
 # function correctMinMaxInputError,
@@ -277,7 +277,7 @@ def getMitogenomeFromGBFile(gbFile):
         record = GenBank.read(gb)
         mitogenomeName = record.organism
         if " " in mitogenomeName:
-            mitogenomeName = mitogenomeName.replace(mitogenomeName[0], str.upper(mitogenomeName[0]), 1).replace(" ", "-")
+            mitogenomeName = mitogenomeName.replace(mitogenomeName[0], str.upper(mitogenomeName[0]), 1).replace(mitogenomeName[1:], str.lower(mitogenomeName[1:]), 1).replace(" ", "-")
 
         return (mitogenomeName, record.sequence, record.accession[0])
 
