@@ -7,6 +7,7 @@
 # import
 import os
 from Bio import GenBank
+from Bio import SeqIO
 
 ################################################################################
 
@@ -37,12 +38,15 @@ def renameGBFile(gbFile):
     mitogenomeName = ""
     newName = ""
     with open(gbFile) as gb:
-        record = GenBank.read(gb)
-        mitogenomeName = record.organism
-        if " " in mitogenomeName:
-            mitogenomeName = mitogenomeName.replace(mitogenomeName[0], str.upper(mitogenomeName[0]), 1).replace(mitogenomeName[1:], str.lower(mitogenomeName[1:]), 1).replace(" ", "-")
+        for record in SeqIO.parse(gb, "genbank"):
+            if record.features[0].qualifiers["organism"]:
+                mitogenomeName = record.features[0].qualifiers["organism"][0]
+                if " " in mitogenomeName:
+                    mitogenomeName = mitogenomeName.replace(mitogenomeName[0], str.upper(mitogenomeName[0]), 1).replace(mitogenomeName[1:], str.lower(mitogenomeName[1:]), 1).replace(" ", "-")
 
-    if gbFile[gbFile.rfind("/")+1:-3] != mitogenomeName:
+                break
+
+    if mitogenomeName!= "" and   (gbFile[gbFile.rfind("/")+1:-3] != mitogenomeName):
         newName = gbFile[:gbFile.rfind("/")+1] + mitogenomeName+ ".gb"
         if os.path.isfile(newName):
             i = 2
@@ -50,7 +54,9 @@ def renameGBFile(gbFile):
                 newName = gbFile[:gbFile.rfind("/")+1] + mitogenomeName+ "_" + str(i) + ".gb"
                 i+=1
 
-    os.rename(gbFile, newName)
+        
+    if newName !="" :
+        os.rename(gbFile, newName)
 
 # main,
 # this is the main function to run

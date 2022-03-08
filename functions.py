@@ -330,8 +330,6 @@ def extractSeqFromGBFile(gbFile):
 
     with open(gbFile) as gb:
         for record in SeqIO.parse(gb, "genbank"):
-            # print(record.id)
-            # break
             mitogenomeName = record.features[0].qualifiers["organism"][0]
             if " " in mitogenomeName:
                 mitogenomeName = mitogenomeName.replace(mitogenomeName[0], str.upper(mitogenomeName[0]), 1).replace(mitogenomeName[1:], str.lower(mitogenomeName[1:]), 1).replace(" ", "-")
