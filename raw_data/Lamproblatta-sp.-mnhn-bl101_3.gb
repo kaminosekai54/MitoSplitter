@@ -1,0 +1,50 @@
+LOCUS       KP986262                 337 bp    DNA     linear   INV 22-AUG-2015
+DEFINITION  Lamproblatta sp. MNHN BL101 12S ribosomal RNA gene, partial
+            sequence; mitochondrial.
+ACCESSION   KP986262
+VERSION     KP986262.1
+KEYWORDS    .
+SOURCE      mitochondrion Lamproblatta sp. MNHN BL101
+  ORGANISM  Lamproblatta sp. MNHN BL101
+            Eukaryota; Metazoa; Ecdysozoa; Arthropoda; Hexapoda; Insecta;
+            Pterygota; Neoptera; Polyneoptera; Dictyoptera; Blattodea;
+            Blattoidea; Lamproblattidae; Lamproblatta; unclassified
+            Lamproblatta.
+REFERENCE   1  (bases 1 to 337)
+  AUTHORS   Legendre,F., Nel,A., Svenson,G.J., Robillard,T., Pellens,R. and
+            Grandcolas,P.
+  TITLE     Phylogeny of Dictyoptera: Dating the Origin of Cockroaches, Praying
+            Mantises and Termites with Molecular Data and Controlled Fossil
+            Evidence
+  JOURNAL   PLoS ONE 10 (7), E0130127 (2015)
+   PUBMED   26200914
+  REMARK    Publication Status: Online-Only
+REFERENCE   2  (bases 1 to 337)
+  AUTHORS   Legendre,F., Nel,A., Svenson,G.J., Robillard,T., Pellens,R. and
+            Grandcolas,P.
+  TITLE     Direct Submission
+  JOURNAL   Submitted (17-MAR-2015) Institut de Systematique, Evolution,
+            Biodiversite, Museum national d'Histoire naturelle, 45 rue Buffon,
+            Paris 75005, France
+COMMENT     ##Assembly-Data-START##
+            Sequencing Technology :: Sanger dideoxy sequencing
+            ##Assembly-Data-END##
+FEATURES             Location/Qualifiers
+     source          1..337
+                     /organism="Lamproblatta sp. MNHN BL101"
+                     /organelle="mitochondrion"
+                     /mol_type="genomic DNA"
+                     /specimen_voucher="MNHN BL101"
+                     /db_xref="taxon:1701653"
+                     /country="French Guiana"
+     rRNA            <1..>337
+                     /product="12S ribosomal RNA"
+ORIGIN      
+        1 taagtagtta aaatattttc ctgagtagta ttagttattt tcttgaaact caaagaattt
+       61 ggcggtatta tattcttttc agaggaatct gtctcgttat tgataatccg cgttgtacct
+      121 ttcttgattt atttcttgta tatctccgtt ataatgaata tctttttagg gttaattttc
+      181 ttgattttta atttaaaatt atttcaggtc aaggtgcagt ataattaagt gttgatggat
+      241 tacttgttta tggattaata gtttaaattt ttttatgaaa atggatttga tagtaattgt
+      301 ttgaagattg taatggtgat atagttctat aatatgt
+//
+

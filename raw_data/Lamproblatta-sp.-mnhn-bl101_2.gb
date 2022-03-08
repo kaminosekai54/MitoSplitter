@@ -1,0 +1,74 @@
+LOCUS       KP986331                1838 bp    DNA     linear   INV 22-AUG-2015
+DEFINITION  Lamproblatta sp. MNHN BL101 18S ribosomal RNA gene, partial
+            sequence.
+ACCESSION   KP986331
+VERSION     KP986331.1
+KEYWORDS    .
+SOURCE      Lamproblatta sp. MNHN BL101
+  ORGANISM  Lamproblatta sp. MNHN BL101
+            Eukaryota; Metazoa; Ecdysozoa; Arthropoda; Hexapoda; Insecta;
+            Pterygota; Neoptera; Polyneoptera; Dictyoptera; Blattodea;
+            Blattoidea; Lamproblattidae; Lamproblatta; unclassified
+            Lamproblatta.
+REFERENCE   1  (bases 1 to 1838)
+  AUTHORS   Legendre,F., Nel,A., Svenson,G.J., Robillard,T., Pellens,R. and
+            Grandcolas,P.
+  TITLE     Phylogeny of Dictyoptera: Dating the Origin of Cockroaches, Praying
+            Mantises and Termites with Molecular Data and Controlled Fossil
+            Evidence
+  JOURNAL   PLoS ONE 10 (7), E0130127 (2015)
+   PUBMED   26200914
+  REMARK    Publication Status: Online-Only
+REFERENCE   2  (bases 1 to 1838)
+  AUTHORS   Legendre,F., Nel,A., Svenson,G.J., Robillard,T., Pellens,R. and
+            Grandcolas,P.
+  TITLE     Direct Submission
+  JOURNAL   Submitted (17-MAR-2015) Institut de Systematique, Evolution,
+            Biodiversite, Museum national d'Histoire naturelle, 45 rue Buffon,
+            Paris 75005, France
+COMMENT     ##Assembly-Data-START##
+            Sequencing Technology :: Sanger dideoxy sequencing
+            ##Assembly-Data-END##
+FEATURES             Location/Qualifiers
+     source          1..1838
+                     /organism="Lamproblatta sp. MNHN BL101"
+                     /mol_type="genomic DNA"
+                     /specimen_voucher="MNHN BL101"
+                     /db_xref="taxon:1701653"
+                     /country="French Guiana"
+     rRNA            <1..>1838
+                     /product="18S ribosomal RNA"
+ORIGIN      
+        1 tgcatgtctc agtgcaagcc gcattaaggt gaaaccgcga atggctcatt aaatcagtta
+       61 tggttcctta gatggaaaac ggttacttgg ataactgtgg taattctaga gctaatacat
+      121 gcaactcggt cccgaccgga gacggaaggg acgcttttat tagatcaaaa ccaatcggcc
+      181 ctcgtggtcg tttgccttgg tgactctgaa taaattgtgg cagatcgcac ggtctccgta
+      241 ccggcgacgc atctttcaaa tgtctgcctt atcaactgtc gatggtaggt tctgcgccta
+      301 ccatggttgt aacgggtaac ggggaatcag ggttcgattc cggagaggga gcctgagaaa
+      361 cggctaccac atccaaggaa ggcagcaggc gcgcaaatta cccactcccg gcacggggag
+      421 gtagtgacga aaaataacga tacgggactc atccgaggcc ccgtaatcgg aatgagcaca
+      481 ctttaaatcc tttaacgagt atccattgga gggcaagtct ggtgccagca gccgcggtaa
+      541 ttccagctcc aatagcgtat attaaagttg ttgcggttaa aaagctcgta gtcggacttg
+      601 tgtctcacgc tgccggttca ccgcccgtcg gtgtctaact ggcatgcacg tgcggacgtc
+      661 ctgccggtgg cccaaaccgg cgtgttcttg gggagggggt cggaaacggt cctcatctct
+      721 ggcgcgtttc ggggagggcc tgctcgaacc cgtcgcggtg ctcttaaccg agtgtctcga
+      781 tgggccggca cgtttacttt gaacaaatta gagtgcttaa agcaggcagc agccgcctga
+      841 ataccgagtg catggaataa tggaatagga cctcggttct attttgttgg ttttcggaag
+      901 ccccgaggta atgatcaata gggacagacg ggggcattcg tattgcgacg ttagaggtga
+      961 aattcttgga tcgtcgcaag acggaccgaa gcgaaagcat ttgccaagaa tgttttctct
+     1021 gatcaagaac gaaagttaga ggttcgaagg cgatcagata ccgccctagt tctaaccata
+     1081 aacgatgcca gccagcaatc cgccgaagtt cctccgatga ctcggcgggc ggcttccggg
+     1141 aaaccaaagc ttttgggttc cgggggaagt atggttgcaa agctgaaact taaaggaatt
+     1201 gacggaaggg caccaccagg agtggagcct gcggcttaat ttgactcaac acgggaaacc
+     1261 tcaccaggcc cggacaccgg gaggattgac agattgagag ctctttcttg attcggtggg
+     1321 tggtggtgca tggccgttct tagttggtgg agcgatttgt ctggttaatt ccgataacga
+     1381 acgagactct agcctgctaa ctagtcgcat ccggtatcct ctgtactacc ggcgactcct
+     1441 gatcttctta gagggacagg cggcttctag ccgcacgaga ttgagcaata acaggtctgt
+     1501 gatgccctta gatgttctgg gccgcacgcg cgctacactg aaggaatcag cgtgtcctcc
+     1561 ctggccgaaa gttccgggta acccgctgaa cctccttcgt gctagggatt ggggcttgca
+     1621 attgttcccc atgaacgagg aattcccagt aagcgcgagt cataagctcg cgttgattac
+     1681 gtccctgccc tttgtacaca ccgcccgtcg ctactaccga ttgaatgatt tagtgaggtc
+     1741 ttcggaccgg tgggcgcggg ggcttgcctc ttcgattcca ccgggaagat gcccaaactt
+     1801 gatcatttag aggaagtaaa agtcgtaaca aggtttcc
+//
+

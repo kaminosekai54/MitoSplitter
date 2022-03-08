@@ -24,30 +24,25 @@ def setup():
     if not os.path.isdir("./logs"):
         os.makedirs("./logs")
 
-# checking if the ressources folder exist and creat it if not
-    if not os.path.isdir("./ressources"):
-        os.makedirs("./ressources")
-
 # checking if the raw_data folder exist and creat it if not
-    if not os.path.isdir("./ressources/raw_data"):
-        os.makedirs("./ressources/raw_data")
+    if not os.path.isdir("./raw_data"):
+        os.makedirs("./raw_data")
 
 # checking if the results folder exist and creat it if not
-    if not os.path.isdir("./ressources/results"):
-        os.makedirs("./ressources/results")
+    if not os.path.isdir("./results"):
+        os.makedirs("./results")
 
     # checking if the results/csv folder exist and creat it if not
-    if not os.path.isdir("./ressources/results/csv"):
-        os.makedirs("./ressources/results/csv")
+    if not os.path.isdir("./results/csv"):
+        os.makedirs("./results/csv")
 
         # checking if the results/genes fasta folder exist and creat it if not
-    if not os.path.isdir("./ressources/results/genes fasta"):
-        os.makedirs("./ressources/results/genes fasta")
+    if not os.path.isdir("./results/genes fasta"):
+        os.makedirs("./results/genes fasta")
 
         # checking if the results/classic fasta folder exist and creat it if not
-    if not os.path.isdir("./ressources/results/classic fasta"):
-        os.makedirs("./ressources/results/classic fasta")
-
+    if not os.path.isdir("./results/classic fasta"):
+        os.makedirs("./results/classic fasta")
 
 # log function
 def writeLog(logToWrite, output_path = settings["logPath"], firstTime = False):
@@ -108,19 +103,40 @@ def getGeneDict(path = settings["genesFastaResultPath"]):
             geneDict[geneName] = []
 
         for record in SeqIO.parse(path+file, "fasta"):
-            geneDict[geneName].append((record.id, record.seq, len(record.seq)))
+            geneDict[geneName].append((record.id, record.seq, len(record.seq), ""))
 
     return geneDict
 
+def isGenomeInSuperpositionDict(gene, valToCheck):
+    for taxon, length in superpositionDict[gene]:
+        if taxon == valToCheck: return True
+
+    return False
+
+def getLengthInSuperpositionDict(gene, mitogenomeName):
+    for taxon, length  in superpositionDict[gene]:
+        if taxon == mitogenomeName: return length
+
+    return pd.NA
+
+
+
 def isGenomeInGeneDict(gene, valToCheck):
-    for taxon, seq, length in geneDict[gene]:
+    for taxon, seq, length, id  in geneDict[gene]:
         if taxon == valToCheck:
             return True
 
     return False
 
+def getAccesIDInGeneDict(gene, mitogenomeName):
+    for taxon, seq, length, id in geneDict[gene]:
+        if taxon == mitogenomeName:
+            if id !="" : return id
+
+    return pd.NA
+
 def getLengthInGeneDict(gene, mitogenomeName):
-    for taxon, seq, length in geneDict[gene]:
+    for taxon, seq, length, id  in geneDict[gene]:
         if taxon == mitogenomeName:
             return length
 
@@ -187,9 +203,17 @@ def writeRecords(listRecords, mtName, destinationPath = settings["classicFastaRe
             else:
                 file = open(fileName, "a")
         
+            accessId=record.description
+            record.description = ""
             writer = SeqIO.FastaIO.FastaWriter(file)
             writer.write_record(record)
-            geneDict[record.name].append((record.id, record.seq, len(record.seq)))
+            geneDict[record.name].append((record.id, record.seq, len(record.seq), accessId))
+
+        else:
+            for i in range(len(geneDict[record.name])):
+                mt, seq, length, id = geneDict[record.name][i]
+                if mt == record.id:
+                    geneDict[record.name][i] = (record.id, record.seq, len(record.seq), record.description)
 
             file.close()
 
@@ -210,9 +234,15 @@ def checkSuperposition(start, prevEnd, mitogenomeName, prevName, name):
     if dif == 0:
         superposedPosition.append(prevEnd)
         
-    log = "Superposition found  for " + mitogenomeName + " between " + prevName + " and " + name + " on the following position : \n" + str(superposedPosition)
+    # log = "Superposition found  for " + mitogenomeName + " between " + prevName + " and " + name + " on the following position : \n" + str(superposedPosition)
+    log = str(len(superposedPosition)) + " Superposition found  for " + mitogenomeName + " between " + prevName + " and " + name 
     writeLog(log)
     print(log)
+
+    superpositionName = prevName +"/"+ name
+    if not superpositionName in superpositionDict.keys():
+        superpositionDict[superpositionName] = []
+    if not isGenomeInSuperpositionDict(superpositionName, mitogenomeName) : superpositionDict[superpositionName].append((mitogenomeName, len(superposedPosition)))
     return (prevName, name, superposedPosition)
 
 # function extractSeqFromCSV,
@@ -291,12 +321,26 @@ def extractSeqFromGBFile(gbFile):
     log = "Starting extraction for " + gbFile
     print(log)
     writeLog(log)
-    mitogenomeName, mitogenomeSeq, accessionID = getMitogenomeFromGBFile(gbFile)
+    # mitogenomeName, mitogenomeSeq, accessionID = getMitogenomeFromGBFile(gbFile)
     listGene = []
     listRecords = []
+    listAccession = []
+    needRename=False
+    mitogenomeName = ""
 
     with open(gbFile) as gb:
         for record in SeqIO.parse(gb, "genbank"):
+            # print(record.id)
+            # break
+            mitogenomeName = record.features[0].qualifiers["organism"][0]
+            if " " in mitogenomeName:
+                mitogenomeName = mitogenomeName.replace(mitogenomeName[0], str.upper(mitogenomeName[0]), 1).replace(mitogenomeName[1:], str.lower(mitogenomeName[1:]), 1).replace(" ", "-")
+
+            mitogenomeSeq = record.seq
+            accessionID = record.id
+            needRename=True
+
+            if not accessionID in listAccession: listAccession.append(accessionID)
             name = ""
             prevType = ""
             prevEnd = -1
@@ -315,7 +359,7 @@ def extractSeqFromGBFile(gbFile):
                     end= correctMinMaxInputError(str(gene.location.end), "Maximum",mitogenomeName,name)
                     seq = mitogenomeSeq [start:end]
                     name = str.upper(name)
-                    record = SeqRecord(Seq(seq), id=mitogenomeName, name=name, description="")
+                    record = SeqRecord(Seq(seq), id=mitogenomeName, name=name, description= accessionID)
                     listRecords.append(record)
                     listGene.append(name)
 
@@ -328,7 +372,8 @@ def extractSeqFromGBFile(gbFile):
                 
     writeRecords(listRecords,mitogenomeName)
 
-    if gbFile[gbFile.rfind("/")+1:-3] != mitogenomeName:
+    # check for rename
+    if gbFile[gbFile.rfind("/")+1:-3] != mitogenomeName and needRename:
         newName = gbFile[:gbFile.rfind("/")+1] + mitogenomeName+ ".gb"
         if os.path.isfile(newName):
             i = 2
@@ -338,7 +383,7 @@ def extractSeqFromGBFile(gbFile):
 
         os.rename(gbFile, newName)
 
-    return (mitogenomeName, accessionID )
+    return (mitogenomeName, listAccession)
 
 def generatePresenceSummary(mitogenomeDict, csvPath= settings["csvResultPath"]):
     data={"Taxon":mitogenomeDict.keys()}
@@ -365,19 +410,36 @@ def generateLengthSummary(mitogenomeDict, csvPath= settings["csvResultPath"]):
     df.to_csv(csvPath+ "summary_length.csv", index=False)
 
 
-
 def generateAccessionIDSummary(mitogenomeDict, csvPath= settings["csvResultPath"]):
-    data={"Taxon":mitogenomeDict.keys(), "AccessionID":mitogenomeDict.values()}
+    data={"Taxon":mitogenomeDict.keys()}
+    for genome in mitogenomeDict.keys():
+        for gene in geneDict.keys():
+            if not gene in data.keys():
+                data[gene] = []
+            
+            data[gene].append(getAccesIDInGeneDict(gene, genome))
     df = pd.DataFrame.from_dict(data)
     df.to_csv(csvPath+ "summary_accessionID.csv", index=False)
 
+
+def generateSuperpositionSummary(mitogenomeDict, csvPath= settings["csvResultPath"]):
+    data={"Taxon":mitogenomeDict.keys()}
+    for genome in mitogenomeDict.keys():
+        for gene in superpositionDict.keys():
+            if not gene in data.keys():
+                data[gene] = []
+            
+            data[gene].append(getLengthInSuperpositionDict(gene, genome))
+
+
+    df = pd.DataFrame.from_dict(data)
+    df.to_csv(csvPath+ "summary_Superposition.csv", index=False)
 # run,
 # this function is the main function to run
 def run():
     setup()
     writeLog("Starting treatement", firstTime=True)
     mitogenomeDict = {}
-    accessionDict = {}
     fastaFiles = getFASTAFiles()
     csvFiles = getCSVFiles()
     gbFiles = getGBFiles()
@@ -390,28 +452,23 @@ def run():
     for c, f in couple:
         mitogenomeName, accessionID = extractSeqFromCSV(settings["rawFilePath"] + c, settings["rawFilePath"] + f)
         if mitogenomeName not in mitogenomeDict.keys(): mitogenomeDict[mitogenomeName] = accessionID
-        if mitogenomeName not in accessionDict.keys(): accessionDict[mitogenomeName] = accessionID
     for file in gbFiles:
         mitogenomeName, accessionID = extractSeqFromGBFile(settings["rawFilePath"] +file)
-        if mitogenomeName not in mitogenomeDict.keys(): mitogenomeDict[mitogenomeName] = accessionID
-        if mitogenomeName not in accessionDict.keys(): 
-            accessionDict[mitogenomeName] = accessionID
+        if mitogenomeName not in mitogenomeDict.keys(): 
+            mitogenomeDict[mitogenomeName] = [accessionID]
         else:
-            newName = mitogenomeName
-            i= 2
-            while newName in accessionDict.keys():
-                newName = mitogenomeName +"_" + str(i)
-                i+=1
-            accessionDict[newName] = accessionID
+            for acces in accessionID:
+                if not acces in mitogenomeDict[mitogenomeName]: mitogenomeDict[mitogenomeName].append(acces)
 
     generatePresenceSummary(mitogenomeDict)
     generateLengthSummary(mitogenomeDict)
-    generateAccessionIDSummary(accessionDict)
+    generateAccessionIDSummary(mitogenomeDict)
+    generateSuperpositionSummary(mitogenomeDict)
     print("Finish")
-
     writeLog("Finish")
 
 ################################################################################
 # initialisation of global variable and environement
 setup()
 geneDict = getGeneDict()
+superpositionDict={}
