@@ -1,13 +1,14 @@
 # Import
 from setting import *
-import os
-import re
+import sys, os, platform, subprocess, re
 from datetime import datetime
 import pandas as pd
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from Bio import GenBank
+from Bio.Align.Applications import MuscleCommandline
+from Bio import AlignIO
 
 
 ################################################################################
@@ -37,12 +38,15 @@ def setup():
         os.makedirs("./results/csv")
 
         # checking if the results/genes fasta folder exist and creat it if not
-    if not os.path.isdir("./results/genes fasta"):
-        os.makedirs("./results/genes fasta")
+    if not os.path.isdir("./results/genes-fasta"):
+        os.makedirs("./results/genes-fasta")
 
         # checking if the results/classic fasta folder exist and creat it if not
-    if not os.path.isdir("./results/classic fasta"):
-        os.makedirs("./results/classic fasta")
+    if not os.path.isdir("./results/classic-fasta"):
+        os.makedirs("./results/classic-fasta")
+
+    if not os.path.isdir("./results/alignement"):
+        os.makedirs("./results/alignement")
 
 # log function
 def writeLog(logToWrite, output_path = settings["logPath"], firstTime = False):
@@ -429,9 +433,46 @@ def generateSuperpositionSummary(mitogenomeDict, csvPath= settings["csvResultPat
             
             data[gene].append(getLengthInSuperpositionDict(gene, genome))
 
-
     df = pd.DataFrame.from_dict(data)
     df.to_csv(csvPath+ "summary_Superposition.csv", index=False)
+
+
+################################################################################
+# Sequence alignement
+def aligneSequence(fasta, outputLocation = settings["sequenceAlignementResultPath"], muscleLocation = settings["musclePath"] ):
+    osName = platform.system()
+    tmpFile = outputLocation + "tmp.aln"
+    outputFile = outputLocation + fasta[fasta.rfind("/")+1:-5]+ "_align.phy"
+    muscleEXE = ""
+    if osName == "Linux":
+        muscleEXE= muscleLocation  + "muscle5.1.linux_intel64"
+    elif osName == "Windows":
+        muscleEXE= muscleLocation+ "muscle5.1.win64.exe"
+    elif osName == "Darwin":
+        muscleEXE=muscleLocation+"muscle5.1.macos_intel64"
+
+    muscle_cline= muscleEXE + " -align " + fasta + " -output " + outputFile
+    child= subprocess.Popen(str(muscle_cline), stdout = subprocess.PIPE, stderr=subprocess.PIPE,          shell = (sys.platform!="win32"))
+    child.wait()
+    # print(child.stdout)
+    # print(child.stdin)
+    # print(child.stderr)
+    # print(muscle_cline)
+
+
+    # aligns= []
+    # with open(outputFile) as align_handle:
+        # aligns= AlignIO.pa(align_handle,"fasta")
+
+    # outfile=open(outputFile , "w")
+    # AlignIO.write([align], outfile, 'phylip')
+    # outfile.close()
+    # os.remove(tmpFile)
+
+
+
+
+    
 # run,
 # this function is the main function to run
 def run():
@@ -464,6 +505,9 @@ def run():
     generateSuperpositionSummary(mitogenomeDict)
     print("Finish")
     writeLog("Finish")
+
+    for fasta in getFASTAFiles(path=settings ["genesFastaResultPath"]):
+        aligneSequence(settings ["genesFastaResultPath"] + fasta)
 
 ################################################################################
 # initialisation of global variable and environement
