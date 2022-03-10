@@ -457,7 +457,9 @@ def aligneSequence(fasta, outputLocation = settings["sequenceAlignementResultPat
     # print(child.stdout)
     # print(child.stdin)
     # print(child.stderr)
-    # print(muscle_cline)
+    print("Commande : ")
+    print(muscle_cline)
+    print("OS : " + osName)
 
 
     # aligns= []
