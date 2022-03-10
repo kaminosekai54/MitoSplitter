@@ -439,38 +439,45 @@ def generateSuperpositionSummary(mitogenomeDict, csvPath= settings["csvResultPat
 
 ################################################################################
 # Sequence alignement
-def aligneSequence(fasta, outputLocation = settings["sequenceAlignementResultPath"], muscleLocation = settings["musclePath"] ):
+def aligneSequence(fasta, useMuscle, useMafft, outputLocation = settings["sequenceAlignementResultPath"], muscleLocation = settings["musclePath"], mafftLocation = settings["mafftPath"]  ):
     osName = platform.system()
-    tmpFile = outputLocation + "tmp.aln"
-    outputFile = outputLocation + fasta[fasta.rfind("/")+1:-5]+ "_align.phy"
-    muscleEXE = ""
-    if osName == "Linux":
-        muscleEXE= muscleLocation  + "muscle5.1.linux_intel64"
-    elif osName == "Windows":
-        muscleEXE= muscleLocation+ "muscle5.1.win64.exe"
-    elif osName == "Darwin":
-        muscleEXE=muscleLocation+"muscle5.1.macos_intel64"
+    if useMuscle:
+        outputFile = outputLocation + fasta[fasta.rfind("/")+1:-5]+ "_muscle_align.phy"
+        muscleEXE = ""
+        if osName == "Linux":
+            muscleEXE= muscleLocation  + "muscle5.1.linux_intel64"
+            subprocess.Popen("chmod +x " + muscleEXE, stdout = subprocess.PIPE, stderr=subprocess.PIPE,          shell = (sys.platform!="win32"))
+        elif osName == "Windows":
+            muscleEXE= muscleLocation+ "muscle5.1.win64.exe"
+        elif osName == "Darwin":
+            muscleEXE=muscleLocation+"muscle5.1.macos_intel64"
+            subprocess.Popen("chmod +x " + muscleEXE, stdout = subprocess.PIPE, stderr=subprocess.PIPE,          shell = (sys.platform!="win32"))
 
-    muscle_cline= muscleEXE + " -align " + fasta + " -output " + outputFile
-    child= subprocess.Popen(str(muscle_cline), stdout = subprocess.PIPE, stderr=subprocess.PIPE,          shell = (sys.platform!="win32"))
-    child.wait()
-    # print(child.stdout)
-    # print(child.stdin)
-    # print(child.stderr)
-    print("Commande : ")
-    print(muscle_cline)
-    print("OS : " + osName)
+        muscle_cline= muscleEXE + " -align " + fasta + " -output " + outputFile
+        child= subprocess.Popen(str(muscle_cline), stdout = subprocess.PIPE, stderr=subprocess.PIPE,          shell = (sys.platform!="win32"))
+        child.wait()
+        print("Commande : ")
+        print(muscle_cline)
 
+    # output try with mafft
+    if useMafft:
+        outputFile = outputLocation + fasta[fasta.rfind("/")+1:-5]+ "_mafft_align.phy"
+        mafftEXE =""
 
-    # aligns= []
-    # with open(outputFile) as align_handle:
-        # aligns= AlignIO.pa(align_handle,"fasta")
+        if osName == "Linux":
+            mafftEXE= mafftLocation  + "muscle5.1.linux_intel64"
+            subprocess.Popen("chmod +x " + mafftEXE, stdout = subprocess.PIPE, stderr=subprocess.PIPE,          shell = (sys.platform!="win32"))
+        elif osName == "Windows":
+            mafftEXE= mafftLocation + "mafft-win/mafft.bat"
+            mafft_cline= "cmd.exe /C " + os.path.abspath(mafftEXE) + " --auto --out "+ outputFile + " " + fasta
+        elif osName == "Darwin":
+            mafftEXE= mafftLocation +"mafft-mac/mafft.bat"
+            subprocess.Popen("chmod +x " + mafftEXE, stdout = subprocess.PIPE, stderr=subprocess.PIPE,          shell = (sys.platform!="win32"))
+            mafft_cline= os.path.abspath(mafftEXE) + " --auto --out "+ outputFile + " " + fasta
 
-    # outfile=open(outputFile , "w")
-    # AlignIO.write([align], outfile, 'phylip')
-    # outfile.close()
-    # os.remove(tmpFile)
-
+        print("Commande : \n" + mafft_cline)
+        child= subprocess.Popen(str(mafft_cline), stdout = subprocess.PIPE, stderr=subprocess.PIPE,          shell = (sys.platform!="win32"))
+        child.wait()
 
 
 
@@ -509,7 +516,7 @@ def run():
     writeLog("Finish")
 
     for fasta in getFASTAFiles(path=settings ["genesFastaResultPath"]):
-        aligneSequence(settings ["genesFastaResultPath"] + fasta)
+        aligneSequence(settings ["genesFastaResultPath"] + fasta, useMuscle=False, useMafft = True)
 
 ################################################################################
 # initialisation of global variable and environement

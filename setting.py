@@ -6,6 +6,7 @@ settings = {
 "genesFastaResultPath": r"./results/genes-fasta/",
 "sequenceAlignementResultPath": r"./results/alignement/",
 "musclePath": r"./tools/muscle/",
+"mafftPath": r"./tools/mafft/",
 "logPath": "./logs/",
 "minColName" : "Minimum",
 "maxColName" : "Maximum",
