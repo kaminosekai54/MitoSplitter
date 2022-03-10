@@ -359,9 +359,12 @@ def extractSeqFromGBFile(gbFile):
                 if gene.type != "gene" and gene.type != "source" and gene.type != "misc_feature":
                     start = correctMinMaxInputError(str(gene.location.start),"Minimum",mitogenomeName,name)
                     end= correctMinMaxInputError(str(gene.location.end), "Maximum",mitogenomeName,name)
-                    seq = mitogenomeSeq [start:end]
+                    strand = gene.location.strand
+                    seq = Seq(mitogenomeSeq [start:end])
+                    if strand == -1:
+                        seq = seq.reverse_complement()
                     name = str.upper(name)
-                    record = SeqRecord(Seq(seq), id=mitogenomeName, name=name, description= accessionID)
+                    record = SeqRecord(seq, id=mitogenomeName, name=name, description= accessionID)
                     listRecords.append(record)
                     listGene.append(name)
 
