@@ -1,4 +1,5 @@
 # Import
+from audioop import mul
 from setting import *
 import sys, os, platform, subprocess, re
 from datetime import datetime
@@ -152,13 +153,15 @@ def getLengthInGeneDict(gene, mitogenomeName):
 #@fastafile, the fasta fle containing the mitogenome
 def getMitogenome(fastaFile):
     for record in SeqIO.parse(fastaFile, "fasta"):
+        multipleFile = -1
         mitogenomeName = fastaFile[fastaFile.rfind("/")+1:].replace(".fasta","")
         if "_" in mitogenomeName:
+            multipleFile= "csv" + mitogenomeName[mitogenomeName.find("_"):]
             mitogenomeName= mitogenomeName[0:mitogenomeName.find("_")]
 
         if " " in mitogenomeName:
             mitogenomeName = mitogenomeName.replace(mitogenomeName[0], str.upper(mitogenomeNmae[0]), 1).replace(mitogenomeName[1:], str.lower(mitogenomeName[1:]), 1).replace(" ", "-")
-        return (mitogenomeName, record.seq, record.id)
+        return (mitogenomeName, record.seq, record.id, multipleFile)
 
 # function correctMinMaxInputError,
 # This function will return only a number extracted from the string in param
@@ -201,11 +204,12 @@ def writeRecords(listRecords, mtName, destinationPath = settings["classicFastaRe
         fileName = destinationPath2  + record.name + ".fasta"
         if not record.name in geneDict.keys():
             geneDict[record.name] = []
-        if not isGenomeInGeneDict(record.name, record.id) :
             if not os.path.isfile(fileName):
-                file = open(fileName, "w")
+                 file = open(fileName, "w")
             else:
                 file = open(fileName, "a")
+        if not isGenomeInGeneDict(record.name, record.id) :
+            
         
             accessId=record.description
             record.description = ""
@@ -217,7 +221,22 @@ def writeRecords(listRecords, mtName, destinationPath = settings["classicFastaRe
             for i in range(len(geneDict[record.name])):
                 mt, seq, length, id = geneDict[record.name][i]
                 if mt == record.id:
-                    geneDict[record.name][i] = (record.id, record.seq, len(record.seq), record.description)
+                    if id == "":
+                        geneDict[record.name][i] = (record.id, seq, len(seq), record.description)
+
+                    elif id == "-1":
+                        geneDict[record.name][i] = (record.id, record.seq, len(record.seq), record.description)
+                    elif "csv_" in id:
+                        x = int(id[id.find("_")+1:])
+                        y = int(record.description[record.description.find("_")+1:])
+                        if y == x+1:
+                            newSeq = seq + record.seq
+                            geneDict[record.name][i] = (record.id, newSeq, len(newSeq), id)
+                            geneDict[record.name].append((record.id, newSeq, len(newSeq), record.description))
+                            writer = SeqIO.FastaIO.FastaWriter(file)
+                            writer.write_record(record)
+
+
 
             file.close()
 
@@ -264,8 +283,9 @@ def extractSeqFromCSV(csv, fasta):
     df[settings["nameColName"]] = df[settings["nameColName"]].str.replace("\s(.*)", "")
     df[settings["nameColName"]] = df[settings["nameColName"]].str.replace("-", "")
     df[settings["nameColName"]] = df[settings["nameColName"]].str.replace("-", "")
+    df[settings["nameColName"]] = df[settings["nameColName"]].str.upper()
 
-    mitogenomeName, mitogenomeSeq, mitogenomeId = getMitogenome(fasta)
+    mitogenomeName, mitogenomeSeq, mitogenomeId, fileNumber = getMitogenome(fasta)
     Subseq = []
     superposedSeq = []
     records = []
@@ -277,7 +297,7 @@ def extractSeqFromCSV(csv, fasta):
         name = df[settings["nameColName"]][i]
         min = correctMinMaxInputError(str(df[settings["minColName"]][i]), settings["minColName"], mitogenomeName, name) -1
         max = correctMinMaxInputError(str(df[settings["maxColName"]][i]), settings["maxColName"], mitogenomeName, name)
-        if min > 0 and max < len(mitogenomeSeq):
+        if min >= 0 and max <= len(mitogenomeSeq):
             if lastMax == -1 : lastMax = max-1
 
             # treatement for superposed position
@@ -286,7 +306,7 @@ def extractSeqFromCSV(csv, fasta):
 
                 #  common treatement
             Subseq.append(mitogenomeSeq[min : max])
-            record = SeqRecord(mitogenomeSeq[min : max], id=mitogenomeName, name=name, description="")
+            record = SeqRecord(mitogenomeSeq[min : max], id=mitogenomeName, name=name, description=str(fileNumber))
             records.append(record)
             lastMax = max
             lastIndex=i
@@ -362,7 +382,6 @@ def extractSeqFromGBFile(gbFile):
                     start = correctMinMaxInputError(str(gene.location.start),"Minimum",mitogenomeName,name)
                     end= correctMinMaxInputError(str(gene.location.end), "Maximum",mitogenomeName,name)
                     strand = gene.location.strand
-                    print(strand)
                     seq = Seq(mitogenomeSeq [start:end])
                     # if strand == -1:
                         # print("need revers")
