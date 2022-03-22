@@ -136,7 +136,7 @@ def isGenomeInGeneDict(gene, valToCheck):
 def getAccesIDInGeneDict(gene, mitogenomeName):
     for taxon, seq, length, id in geneDict[gene]:
         if taxon == mitogenomeName:
-            if id !="" : return id
+            if id !="" and id !="-1" and not "csv_" in id: return id
 
     return pd.NA
 
@@ -292,9 +292,10 @@ def extractSeqFromCSV(csv, fasta):
     writeLog(log)
     df = pd.read_csv(csv, sep=",")
     df = df[df[settings["typeColName"]] != "gene"]
+    df = df[df[settings["typeColName"]] != "source"]
     df[settings["nameColName"]] = df[settings["nameColName"]].str.replace("\s(.*)", "")
-    df[settings["nameColName"]] = df[settings["nameColName"]].str.replace("-", "")
-    df[settings["nameColName"]] = df[settings["nameColName"]].str.replace("-", "")
+    df[settings["nameColName"]] = df[settings["nameColName"]].str.replace(")", "-")
+    df[settings["nameColName"]] = df[settings["nameColName"]].str.replace("(", "-")
     df[settings["nameColName"]] = df[settings["nameColName"]].str.upper()
 
     mitogenomeName, mitogenomeSeq, mitogenomeId, fileNumber = getMitogenome(fasta)
