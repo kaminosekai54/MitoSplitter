@@ -12,6 +12,8 @@ settings = {
 "maxColName" : "Maximum",
 "nameColName" : "Name",
 "typeColName" : "Type",
+"useMuscle" : False,
+"useMafft" : True,
 }
 
 def getSettings():
