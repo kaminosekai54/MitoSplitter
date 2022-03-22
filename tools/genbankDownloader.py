@@ -23,7 +23,7 @@ def getIDListFromCSV(file = "./list_accessionID.csv"):
     if "accessionID" in df:
         return df["accessionID"].tolist()
     else:
-        print("Column not found : accession ID \n Please make sure it's name correctly in your file (Case sensitive)")
+        print("Column not found : accessionID \n Please make sure it's name correctly in your file (Case sensitive)")
         return -1
 
 def downloadFiles(idList, db = "nuccore", outputPath = "../raw_data/"):
@@ -43,6 +43,7 @@ def downloadFiles(idList, db = "nuccore", outputPath = "../raw_data/"):
 
 def main():
     idList = getIDListFromCSV()
+    print(idList)
     if idList != -1:
         downloadFiles(idList=idList)
         print("Download finish")

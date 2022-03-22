@@ -204,13 +204,13 @@ def writeRecords(listRecords, mtName, destinationPath = settings["classicFastaRe
         fileName = destinationPath2  + record.name + ".fasta"
         if not record.name in geneDict.keys():
             geneDict[record.name] = []
+            
+        if not isGenomeInGeneDict(record.name, record.id) :
+
             if not os.path.isfile(fileName):
                  file = open(fileName, "w")
             else:
                 file = open(fileName, "a")
-        if not isGenomeInGeneDict(record.name, record.id) :
-            
-        
             accessId=record.description
             record.description = ""
             writer = SeqIO.FastaIO.FastaWriter(file)
@@ -231,14 +231,26 @@ def writeRecords(listRecords, mtName, destinationPath = settings["classicFastaRe
                         y = int(record.description[record.description.find("_")+1:])
                         if y == x+1:
                             newSeq = seq + record.seq
+                            modifySeqInFasta(fileName,mt, newSeq)
                             geneDict[record.name][i] = (record.id, newSeq, len(newSeq), id)
                             geneDict[record.name].append((record.id, newSeq, len(newSeq), record.description))
-                            writer = SeqIO.FastaIO.FastaWriter(file)
-                            writer.write_record(record)
 
 
 
             file.close()
+
+
+def modifySeqInFasta(fileName,mitogenomeName, newSeq):
+    listRec = []
+    for record in SeqIO.parse(fileName, "fasta"):
+        if record.id == mitogenomeName:
+            record.seq = newSeq
+
+        listRec.append(record)
+
+    with open(fileName, "w") as file:
+        writer = SeqIO.FastaIO.FastaWriter(file)
+        writer.write_file(listRec)
 
 
 #checkSuperposition
