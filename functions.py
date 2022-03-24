@@ -305,11 +305,18 @@ def extractSeqFromCSV(csv, fasta):
     lastMax = -1
     lastIndex = -1
     nbTreated = 0
+    prevName =""
+    nextName = ""
+    listName = []
 
     for i in df.index:
         name = df[settings["nameColName"]][i]
         min = correctMinMaxInputError(str(df[settings["minColName"]][i]), settings["minColName"], mitogenomeName, name) -1
         max = correctMinMaxInputError(str(df[settings["maxColName"]][i]), settings["maxColName"], mitogenomeName, name)
+
+        if i+1 < len(df.index) and i+1 in df.index :
+            nextName = df[settings["nameColName"]][i+1]
+
         if min >= 0 and max <= len(mitogenomeSeq):
             if lastMax == -1 : lastMax = max-1
 
@@ -318,12 +325,29 @@ def extractSeqFromCSV(csv, fasta):
                 superposedSeq.append(checkSuperposition(min, lastMax, mitogenomeName, df[settings["nameColName"]][lastIndex], name))
 
                 #  common treatement
+            if name == "TRNA-LEU":
+                if prevName == "COX1" and nextName == "COX2": name = name +"1"
+                elif prevName == "COX1" : name = name +"1"
+                elif nextName == "COX2": name = name +"1"
+                elif (prevName == "ND1" or prevName == "NAD1")and nextName == "16S" : name = name +"2"
+                elif (prevName == "ND1" or prevName == "NAD1"): name = name +"2"
+                elif nextName == "16S" : name = name +"2"
+
+            if name == "TRNA-SER":
+                if prevName == "TRNA-ASN" and nextName == "TRNA-GLU" : name = name +"1"
+                elif prevName == "TRNA-ASN" : name = name +"1"
+                elif nextName == "TRNA-GLU" : name = name +"1"
+                elif prevName == "CYTB" and (nextName == "ND1" or nextName == "NAD1") : name = name +"2"
+                elif prevName == "CYTB": name = name +"2"
+                elif (nextName == "ND1" or nextName == "NAD1") : name = name +"2"
             Subseq.append(mitogenomeSeq[min : max])
             record = SeqRecord(mitogenomeSeq[min : max], id=mitogenomeName, name=name, description=str(fileNumber))
             records.append(record)
+            listName.append(name)
             lastMax = max
             lastIndex=i
             nbTreated+=1
+            prevName= name
         else:
             Subseq.append(pd.NA)
             log = "The sequence : " + name + " from the mitogenome " + mitogenomeName + " from the file " + csv + "has not been found"
@@ -332,6 +356,18 @@ def extractSeqFromCSV(csv, fasta):
 
     df = df.assign(Subsequence = Subseq)
     df.to_csv(settings["csvResultPath"] + csv[csv.rfind("/")+1:].replace(".csv","") + "_with_sequence.csv", index= False)
+
+    leu1Found = "TRNA-LEU1" in listName
+    leu2Found = "TRNA-LEU2" in listName
+    ser1Found= "TRNA-SER1" in listName
+    ser2Found= "TRNA-SER2" in listName
+    for record in records :
+        if record.name == "TRNA-LEU" and leu1Found and not leu2Found: record.name = record.name +"2"
+        if record.name == "TRNA-LEU" and not leu1Found and leu2Found: record.name = record.name +"1"
+        if record.name == "TRNA-SER" and not ser1Found and ser2Found : record.name = record.name +"1"
+        if record.name == "TRNA-SER" and ser1Found and not ser2Found : record.name = record.name +"2"
+
+
 
 # writting the fasta
     writeRecords(records, mitogenomeName)
@@ -376,12 +412,16 @@ def extractSeqFromGBFile(gbFile):
             mitogenomeSeq = record.seq
             accessionID = record.id
             needRename=True
+            listName = []
 
             if not accessionID in listAccession: listAccession.append(accessionID)
             name = ""
             prevType = ""
             prevEnd = -1
             nbTreated =0
+            prevName = ""
+            nextName = ""
+            nextIndex =1
             for gene in record.features:
                 if gene.type == "tRNA":
                     name = gene.qualifiers["product"][0]
@@ -390,7 +430,13 @@ def extractSeqFromGBFile(gbFile):
                 elif gene.type == "rRNA":
                     name = gene.qualifiers["product"][0][:gene.qualifiers["product"][0].find(" ")]
 
-                
+                if nextIndex < len(record.features):
+                    if record.features[nextIndex].type == "tRNA":
+                        nextName= str.upper(record.features[nextIndex].qualifiers["product"][0])
+                    elif record.features[nextIndex].type == "CDS":
+                        nextName= str.upper(record.features[nextIndex].qualifiers["gene"][0])
+                    elif record.features[nextIndex].type == "rRNA":
+                        nextName= str.upper(record.features[nextIndex].qualifiers["product"][0][:record.features[nextIndex].qualifiers["product"][0].find(" ")])
                 if gene.type != "gene" and gene.type != "source" and gene.type != "misc_feature":
                     start = correctMinMaxInputError(str(gene.location.start),"Minimum",mitogenomeName,name)
                     end= correctMinMaxInputError(str(gene.location.end), "Maximum",mitogenomeName,name)
@@ -400,6 +446,23 @@ def extractSeqFromGBFile(gbFile):
                         # print("need revers")
                         # seq = seq.reverse_complement()
                     name = str.upper(name)
+
+                    if name == "TRNA-LEU":
+                        if prevName == "COX1" and nextName == "COX2": name = name +"1"
+                        elif prevName == "COX1" : name = name +"1"
+                        elif nextName == "COX2": name = name +"1"
+                        elif (prevName == "ND1" or prevName == "NAD1")and nextName == "16S" : name = name +"2"
+                        elif (prevName == "ND1" or prevName == "NAD1"): name = name +"2"
+                        elif nextName == "16S" : name = name +"2"
+
+                    if name == "TRNA-SER":
+                        if prevName == "TRNA-ASN" and nextName == "TRNA-GLU" : name = name +"1"
+                        elif prevName == "TRNA-ASN" : name = name +"1"
+                        elif nextName == "TRNA-GLU" : name = name +"1"
+                        elif prevName == "CYTB" and (nextName == "ND1" or nextName == "NAD1") : name = name +"2"
+                        elif prevName == "CYTB": name = name +"2"
+                        elif (nextName == "ND1" or nextName == "NAD1") : name = name +"2"
+
                     record = SeqRecord(seq, id=mitogenomeName, name=name, description= accessionID)
                     listRecords.append(record)
                     listGene.append(name)
@@ -410,8 +473,22 @@ def extractSeqFromGBFile(gbFile):
                     nbTreated+=1
                     prevEnd=gene.location.end
                     prevType= gene.type
-                
-    writeRecords(listRecords,mitogenomeName)
+                    prevName= name
+                    nextIndex+=1
+                    listName.append(name)
+
+    
+    leu1Found = "TRNA-LEU1" in listName
+    leu2Found = "TRNA-LEU2" in listName
+    ser1Found= "TRNA-SER1" in listName
+    ser2Found= "TRNA-SER2" in listName
+    for record in listRecords:
+        if record.name == "TRNA-LEU" and leu1Found and not leu2Found: record.name = record.name +"2"
+        if record.name == "TRNA-LEU" and not leu1Found and leu2Found: record.name = record.name +"1"
+        if record.name == "TRNA-SER" and not ser1Found and ser2Found : record.name = record.name +"1"
+        if record.name == "TRNA-SER" and ser1Found and not ser2Found : record.name = record.name +"2"
+
+    writeRecords(listRecords, mitogenomeName)
 
     # check for rename
     if gbFile[gbFile.rfind("/")+1:-3] != mitogenomeName and needRename:
