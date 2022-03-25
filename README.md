@@ -34,7 +34,8 @@ chmod +x tools/muscle/muscle5.1.linux_intel64
 
 Please don't change the name of the executable file, they are used in the script to find the command line program.
 If you have those software already installed, feel free to change their location in the settings.py file
- 
+
+You can choose to use only mafft or only muscle or both by changing the useMuscle and useMafft variable in the settings.py file 
  ################################################################################
 Utilisation :
 
