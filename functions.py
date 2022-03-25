@@ -297,6 +297,10 @@ def extractSeqFromCSV(csv, fasta):
     df[settings["nameColName"]] = df[settings["nameColName"]].str.replace(")", "-")
     df[settings["nameColName"]] = df[settings["nameColName"]].str.replace("(", "-")
     df[settings["nameColName"]] = df[settings["nameColName"]].str.upper()
+    df[settings["nameColName"]] = df[settings["nameColName"]].str.replace("COII", "COX2")
+    df[settings["nameColName"]] = df[settings["nameColName"]].str.replace("COI", "COX1")
+    df[settings["nameColName"]] = df[settings["nameColName"]].str.replace("NADH", "ND")
+    df[settings["nameColName"]] = df[settings["nameColName"]].str.replace("NAD", "ND")
 
     mitogenomeName, mitogenomeSeq, mitogenomeId, fileNumber = getMitogenome(fasta)
     Subseq = []
@@ -447,6 +451,11 @@ def extractSeqFromGBFile(gbFile):
                         # seq = seq.reverse_complement()
                     name = str.upper(name)
 
+
+                    if "NADH" in name : name = name.replace("NADH", "ND")
+                    if "NAD" in name : name = name.replace("NAD", "ND")
+                    if name == "COI" : name = "COX1"
+                    if name == "COII" : name = "COX2"
                     if name == "TRNA-LEU":
                         if prevName == "COX1" and nextName == "COX2": name = name +"1"
                         elif prevName == "COX1" : name = name +"1"
