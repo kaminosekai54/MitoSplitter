@@ -9,6 +9,8 @@ from Bio.SeqRecord import SeqRecord
 from Bio import GenBank
 from Bio import AlignIO
 from Bio.Phylo.TreeConstruction import DistanceCalculator
+from Bio.Phylo.TreeConstruction import DistanceTreeConstructor
+from Bio import Phylo
 from Bio.Align import MultipleSeqAlignment
 
 
@@ -46,8 +48,13 @@ def setup():
     if not os.path.isdir("./results/classic-fasta"):
         os.makedirs("./results/classic-fasta")
 
+    # checking if the results/alignement folder exist and creat it if not
     if not os.path.isdir("./results/alignement"):
         os.makedirs("./results/alignement")
+
+    # checking if the results/tree folder exist and creat it if not
+    if not os.path.isdir("./results/tree"):
+        os.makedirs("./results/tree")
 
 # log function
 def writeLog(logToWrite, output_path = settings["logPath"], firstTime = False):
@@ -789,8 +796,45 @@ def checkMuscleAlignement(alignementFile, alignementPath= settings ["sequenceAli
 
 
 
+################################################################################
+# tree section
 
-    
+def generateIQTree(alignementFile, outputLocation = settings["treeResultPath"], iqtreeLocation = settings["iqtreePath"]):
+    osName = platform.system()
+    outputFile = outputLocation + alignementFile[alignementFile.rfind("/")+1:-6]+ "_tree.phy"
+    tmpFile= outputLocation + alignementFile[alignementFile.rfind("/")+1:-6]+ "_tree.fasta"
+
+    iqtreeEXE= ""
+    iqtree_cline = ""
+    if osName == "Linux":
+        iqtreeEXE= iqtreeLocation  + "iqtree-Linux/bin/iqtree2"
+        subprocess.Popen("chmod +x " + iqtreeEXE, stdout = subprocess.PIPE, stderr=subprocess.PIPE,          shell = (sys.platform!="win32")).wait()
+    elif osName == "Windows":
+        iqtreeEXE= iqtreeLocation  + "iqtree-Windows/bin/iqtree2.exe"
+    elif osName == "Darwin":
+        iqtreeEXE= iqtreeLocation  + "iqtree-MacOSX/bin/iqtree2"
+        subprocess.Popen("chmod +x " + iqtreeEXE, stdout = subprocess.PIPE, stderr=subprocess.PIPE,          shell = (sys.platform!="win32")).wait()
+        
+        
+    # iqtree_cline =os.path.normpath(iqtreeEXE) + " -s " + os.path.normpath(alignementFile) + " -T AUTO"
+    iqtree_cline =os.path.abspath(iqtreeEXE) + " -s " + os.path.abspath(alignementFile) + " -T AUTO -m GTR+I+G"
+    print("Commande : \n" + iqtree_cline )
+    child= subprocess.Popen(str(iqtree_cline ), stdout = subprocess.PIPE, stderr=subprocess.PIPE,          shell = (sys.platform!="win32"))
+    child.wait()
+
+def generateDistanceTree(alignementFile, outputLocation = settings["treeResultPath"]):
+    gene = alignementFile[alignementFile.rfind("/")+1:alignementFile.find("_")]
+    aln = AlignIO.read(alignementFile, 'phylip-relaxed')
+    calculator = DistanceCalculator('identity')
+    dm = calculator.get_distance(aln)
+    constructor = DistanceTreeConstructor(calculator, 'nj')
+    tree =constructor.build_tree(aln)
+    Phylo.write(tree, outputLocation+ gene + "_nj_dist_tree.nhx", "newick")
+
+
+
+
+
 # run,
 # this function is the main function to run
 def run():
@@ -836,8 +880,11 @@ def run():
             checkMafftAlignement(alignedFile)
 
     alignementDict, multipleAlignementList = getAlignementDict()
-    # generateGlobalConcatenatedAlignementMatrix(alignementDict, mitogenomeDict)
+    generateGlobalConcatenatedAlignementMatrix(alignementDict, mitogenomeDict)
     writeConcatenatedMatrix(alignementDict, mitogenomeDict, multipleAlignementList)
+    # generateIQTree(settings["sequenceAlignementResultPath"] + "concatenatedMatrix.phy")
+    # generateIQTree(settings["treeResultPath"] + "COX1_mafft_align.phy")
+    generateDistanceTree(settings["treeResultPath"] + "COX1_mafft_align.phy")
     print("Finish")
     writeLog("Finish")
 ################################################################################

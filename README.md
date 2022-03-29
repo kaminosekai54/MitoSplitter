@@ -1,4 +1,4 @@
-# data-compiler
+# MitoSplitter
 
 ################################################################################
 
@@ -78,3 +78,7 @@ WARNING :  on macOS you might need to install a default ssl certificate with the
 cd /Applications/Python 3.6/
 ./Install Certificates.command
 Change the python version for the one you are using.
+
+
+download link for iqtree : http://www.iqtree.org/#download
+version : 2.2.0
