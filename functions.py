@@ -669,14 +669,16 @@ def aligneSequenceWithMafft(fasta, outputLocation = settings["sequenceAlignement
 
 def writeConcatenatedMatrix(alignementDict, mitogenomeDict, multipleAlignementList, destinationPath = settings["sequenceAlignementResultPath"], csvPath = settings["csvResultPath"]):
     data ={}
-    lenghtCounter = 0
     anotationDict = {}
     for genome in mitogenomeDict.keys():
+        lenghtCounter = 0
         if not genome in data.keys(): data[genome] = ""
         for gene in alignementDict.keys():
             alignement = str(getseqInAlignementDict(alignementDict, gene, genome))
-            if not gene in anotationDict .keys() : anotationDict [gene] =[ str(len(data[genome] ))+ "-" + str(len(data[genome])+ len(alignement))]
+            if not gene in anotationDict .keys() :
+                anotationDict [gene] =[ str(lenghtCounter+1) + "-" + str(lenghtCounter + len(alignement))]
             data[genome] += alignement
+            lenghtCounter = len(data[genome])
 
             
             # data[gene].append(getseqInAlignementDict(alignementDict, gene, genome))
@@ -685,10 +687,18 @@ def writeConcatenatedMatrix(alignementDict, mitogenomeDict, multipleAlignementLi
         msa.append(SeqRecord(Seq(seq), id = id))
 
     msa = MultipleSeqAlignment(msa, annotations=anotationDict)
-    df = pd.DataFrame.from_dict(anotationDict)
-    df.to_csv(csvPath+ "concatenated_matrix_position_anotation.csv", index=False)
     file = AlignIO.write(msa, destinationPath+ "concatenatedMatrix.phy", "phylip-relaxed")
     file = AlignIO.write(multipleAlignementList, destinationPath+ "concatenatedMatrix_v2.phy", "phylip-relaxed")
+    # AlignIO.convert(destinationPath+ "concatenatedMatrix.phy", "phylip-relaxed", destinationPath+ "concatenatedMatrix_v3.nex", "nexus", "DNA")
+    infoLocation = ";" + "\n" + "[BEGIN MrBayes;" + "\n" + "	outgroup OUT1;" + "\n"
+    for gene, info in anotationDict.items():
+        infoLocation += "	CHARSET " + str(gene) + " = " + info[0] + ";" + "\n"
+
+    infoLocation+= "	partition markers = 7: " + str(anotationDict.keys()).replace("[", "").replace("]", "") + "\n" + "end;]"
+    with open(destinationPath+ "concatenatedMatrix.phy", "a") as fileObj:
+        fileObj.write(infoLocation)
+
+
 
 def writeSingleRecordList(tmpFasta, listRec):
     with open(tmpFasta, "w") as file:
@@ -791,11 +801,14 @@ def run():
     csvFiles = getCSVFiles()
     gbFiles = getGBFiles()
     couple = []
+    singleFasta = []
     for f in fastaFiles:
         for c in csvFiles:
             if f[:-5] in c:
                 couple.append((c,f))
+                singleFasta.append(f)
     
+    singleFasta= [x for x in fastaFiles if x not in singleFasta]
     for c, f in couple:
         mitogenomeName, accessionID = extractSeqFromCSV(settings["rawFilePath"] + c, settings["rawFilePath"] + f)
         if mitogenomeName not in mitogenomeDict.keys(): mitogenomeDict[mitogenomeName] = accessionID
@@ -823,8 +836,7 @@ def run():
             checkMafftAlignement(alignedFile)
 
     alignementDict, multipleAlignementList = getAlignementDict()
-    generateGlobalConcatenatedAlignementMatrix(alignementDict, mitogenomeDict)
-    # writeConcatenatedMatrix(multipleAlignementList)
+    # generateGlobalConcatenatedAlignementMatrix(alignementDict, mitogenomeDict)
     writeConcatenatedMatrix(alignementDict, mitogenomeDict, multipleAlignementList)
     print("Finish")
     writeLog("Finish")
