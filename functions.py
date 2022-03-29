@@ -1,5 +1,4 @@
 # Import
-from audioop import mul
 from setting import *
 import sys, os, platform, subprocess, re
 from datetime import datetime
@@ -10,6 +9,7 @@ from Bio.SeqRecord import SeqRecord
 from Bio import GenBank
 from Bio import AlignIO
 from Bio.Phylo.TreeConstruction import DistanceCalculator
+from Bio.Align import MultipleSeqAlignment
 
 
 ################################################################################
@@ -112,6 +112,27 @@ def getGeneDict(path = settings["genesFastaResultPath"]):
 
     return geneDict
 
+def getAlignementDict(path = settings["sequenceAlignementResultPath"]):
+    alignementDict = {}
+    multipleAlignementList = []
+    fileList = os.listdir(path)
+    for file in fileList:
+        if "mafft" in file:
+            geneName = file[file.rfind("/")+1:file.find("_")].replace(".phy","").replace("_", "")
+            if not geneName in alignementDict.keys():
+                alignementDict[geneName] = []
+
+            aln =AlignIO.read(path+file, "phylip-relaxed")
+            multipleAlignementList.append(aln)
+
+            # for aln in AlignIO.parse(path+file, "phylip-relaxed"):
+                # for record in aln:
+            for record in aln:
+                alignementDict[geneName].append((record.id, record.seq, len(record.seq), record))
+
+    return (alignementDict, multipleAlignementList)
+
+
 def isGenomeInSuperpositionDict(gene, valToCheck):
     for taxon, length in superpositionDict[gene]:
         if taxon == valToCheck: return True
@@ -146,6 +167,23 @@ def getLengthInGeneDict(gene, mitogenomeName):
             return length
 
     return pd.NA
+
+
+def getseqInAlignementDict(alignementDict, gene, mitogenomeName):
+    len = 0
+    for taxon, seq, length, desc   in alignementDict[gene]:
+        len = length
+        if taxon == mitogenomeName: return seq
+
+    return Seq("?"*len)
+
+def getRecordInAlignementDict(alignementDict, gene, mitogenomeName):
+    len = 0
+    for taxon, seq, length, record in alignementDict[gene]:
+        len = length
+        if taxon == mitogenomeName: return record
+
+    return SecRecord(Seq("?"*len), id = mitogenomeName, name = gene, description = "")
 
 #getMitogenome,
 #this function return a tuple containing the id and seq of the mitogenome
@@ -561,62 +599,96 @@ def generateSuperpositionSummary(mitogenomeDict, csvPath= settings["csvResultPat
     df = pd.DataFrame.from_dict(data)
     df.to_csv(csvPath+ "summary_Superposition.csv", index=False)
 
+def generateGlobalConcatenatedAlignementMatrix(alignementDict, mitogenomeDict, csvPath= settings["csvResultPath"]):
+    data={"Taxon":mitogenomeDict.keys()}
+    for genome in mitogenomeDict.keys():
+        for gene in alignementDict.keys():
+            if not gene in data.keys():
+                data[gene] = []
+            
+            data[gene].append(getseqInAlignementDict(alignementDict, gene, genome))
+
+    df = pd.DataFrame.from_dict(data)
+    df.to_csv(csvPath+ "global_concatenated_alignement_matrix.csv", index=False)
+
 
 ################################################################################
 # Sequence alignement
-def aligneSequence(fasta, useMuscle =settings["useMuscle"], useMafft=settings["useMafft"],  outputLocation = settings["sequenceAlignementResultPath"], muscleLocation = settings["musclePath"], mafftLocation = settings["mafftPath"]  ):
+def aligneSequenceWithMuscle(fasta, outputLocation = settings["sequenceAlignementResultPath"], muscleLocation = settings["musclePath"]):
     osName = platform.system()
     outputFile =""
-    if useMuscle:
-        log = "Processing Muscle alignement for " + fasta
-        print(log)
-        outputFile = outputLocation + fasta[fasta.rfind("/")+1:-6]+ "_muscle_align.phy"
-        tmpFile= outputLocation + fasta[fasta.rfind("/")+1:-6]+ "_muscle_align.fasta"
+    log = "Processing Muscle alignement for " + fasta
+    print(log)
+    outputFile = outputLocation + fasta[fasta.rfind("/")+1:-6]+ "_muscle_align.phy"
+    tmpFile= outputLocation + fasta[fasta.rfind("/")+1:-6]+ "_muscle_align.fasta"
 
-        muscleEXE = ""
-        if osName == "Linux":
-            muscleEXE= muscleLocation  + "muscle5.1.linux_intel64"
-            subprocess.Popen("chmod +x " + muscleEXE, stdout = subprocess.PIPE, stderr=subprocess.PIPE,          shell = (sys.platform!="win32")).wait()
-        elif osName == "Windows":
-            muscleEXE= muscleLocation+ "muscle5.1.win64.exe"
-        elif osName == "Darwin":
-            muscleEXE=muscleLocation+"muscle5.1.macos_intel64"
-            subprocess.Popen("chmod +x " + muscleEXE, stdout = subprocess.PIPE, stderr=subprocess.PIPE,          shell = (sys.platform!="win32")).wait()
+    muscleEXE = ""
+    if osName == "Linux":
+        muscleEXE= muscleLocation  + "muscle5.1.linux_intel64"
+        subprocess.Popen("chmod +x " + muscleEXE, stdout = subprocess.PIPE, stderr=subprocess.PIPE,          shell = (sys.platform!="win32")).wait()
+    elif osName == "Windows":
+        muscleEXE= muscleLocation+ "muscle5.1.win64.exe"
+    elif osName == "Darwin":
+        muscleEXE=muscleLocation+"muscle5.1.macos_intel64"
+        subprocess.Popen("chmod +x " + muscleEXE, stdout = subprocess.PIPE, stderr=subprocess.PIPE,          shell = (sys.platform!="win32")).wait()
 
-        muscle_cline= muscleEXE + " -align " + os.path.normpath(fasta) + " -output " + os.path.normpath(tmpFile)
-        child= subprocess.Popen(str(muscle_cline), stdout = subprocess.PIPE, stderr=subprocess.PIPE,          shell = (sys.platform!="win32"))
-        child.wait()
-        AlignIO.convert(tmpFile, "fasta", outputFile, "phylip-relaxed")
-        os.remove(tmpFile)
-
-
-    # output try with mafft
-    if useMafft:
-        log = "Processing Mafft alignement for " + fasta
-        print(log)
-        outputFile = outputLocation + fasta[fasta.rfind("/")+1:-6]+ "_mafft_align.phy"
-        tmpFile= outputLocation + fasta[fasta.rfind("/")+1:-6] + "_mafft_align.fasta"
-        mafftEXE =""
-
-        if osName == "Linux":
-            mafftEXE= mafftLocation  + "muscle5.1.linux_intel64"
-            subprocess.Popen("chmod +x " + mafftEXE, stdout = subprocess.PIPE, stderr=subprocess.PIPE,          shell = (sys.platform!="win32")).wait()
-        elif osName == "Windows":
-            mafftEXE= mafftLocation + "mafft-win/mafft.bat"
-            mafft_cline= "cmd.exe /C " + os.path.abspath(mafftEXE) + " --auto --out "+ os.path.normpath(tmpFile) + " " + os.path.normpath(fasta)
-        elif osName == "Darwin":
-            mafftEXE= mafftLocation +"mafft-mac/mafft.bat"
-            subprocess.Popen("chmod +x " + mafftEXE, stdout = subprocess.PIPE, stderr=subprocess.PIPE,          shell = (sys.platform!="win32")).wait()
-            mafft_cline= os.path.abspath(mafftEXE) + " --auto --out "+ os.path.normpath(tmpFile) + " " + os.path.normpath(fasta)
-
-        print("Commande : \n" + mafft_cline)
-        child= subprocess.Popen(str(mafft_cline), stdout = subprocess.PIPE, stderr=subprocess.PIPE,          shell = (sys.platform!="win32"))
-        child.wait()
-        AlignIO.convert(tmpFile, "fasta", outputFile, "phylip-relaxed")
-        os.remove(tmpFile)
-        
+    muscle_cline= muscleEXE + " -align " + os.path.normpath(fasta) + " -output " + os.path.normpath(tmpFile)
+    child= subprocess.Popen(str(muscle_cline), stdout = subprocess.PIPE, stderr=subprocess.PIPE,          shell = (sys.platform!="win32"))
+    child.wait()
+    AlignIO.convert(tmpFile, "fasta", outputFile, "phylip-relaxed")
+    os.remove(tmpFile)
     return outputFile
 
+def aligneSequenceWithMafft(fasta, outputLocation = settings["sequenceAlignementResultPath"], mafftLocation = settings["mafftPath"]  ):
+    osName = platform.system()
+    outputFile =""
+    log = "Processing Mafft alignement for " + fasta
+    print(log)
+    outputFile = outputLocation + fasta[fasta.rfind("/")+1:-6]+ "_mafft_align.phy"
+    tmpFile= outputLocation + fasta[fasta.rfind("/")+1:-6] + "_mafft_align.fasta"
+    mafftEXE =""
+
+    if osName == "Linux":
+        mafftEXE= mafftLocation  + "muscle5.1.linux_intel64"
+        subprocess.Popen("chmod +x " + mafftEXE, stdout = subprocess.PIPE, stderr=subprocess.PIPE,          shell = (sys.platform!="win32")).wait()
+    elif osName == "Windows":
+        mafftEXE= mafftLocation + "mafft-win/mafft.bat"
+        mafft_cline= "cmd.exe /C " + os.path.abspath(mafftEXE) + " --auto --out "+ os.path.normpath(tmpFile) + " " + os.path.normpath(fasta)
+    elif osName == "Darwin":
+        mafftEXE= mafftLocation +"mafft-mac/mafft.bat"
+        subprocess.Popen("chmod +x " + mafftEXE, stdout = subprocess.PIPE, stderr=subprocess.PIPE,          shell = (sys.platform!="win32")).wait()
+        mafft_cline= os.path.abspath(mafftEXE) + " --auto --out "+ os.path.normpath(tmpFile) + " " + os.path.normpath(fasta)
+
+    print("Commande : \n" + mafft_cline)
+    child= subprocess.Popen(str(mafft_cline), stdout = subprocess.PIPE, stderr=subprocess.PIPE,          shell = (sys.platform!="win32"))
+    child.wait()
+    AlignIO.convert(tmpFile, "fasta", outputFile, "phylip-relaxed")
+    os.remove(tmpFile)
+    return outputFile
+
+
+def writeConcatenatedMatrix(alignementDict, mitogenomeDict, multipleAlignementList, destinationPath = settings["sequenceAlignementResultPath"], csvPath = settings["csvResultPath"]):
+    data ={}
+    lenghtCounter = 0
+    anotationDict = {}
+    for genome in mitogenomeDict.keys():
+        if not genome in data.keys(): data[genome] = ""
+        for gene in alignementDict.keys():
+            alignement = str(getseqInAlignementDict(alignementDict, gene, genome))
+            if not gene in anotationDict .keys() : anotationDict [gene] =[ str(len(data[genome] ))+ "-" + str(len(data[genome])+ len(alignement))]
+            data[genome] += alignement
+
+            
+            # data[gene].append(getseqInAlignementDict(alignementDict, gene, genome))
+    msa =[]
+    for id, seq in data.items():
+        msa.append(SeqRecord(Seq(seq), id = id))
+
+    msa = MultipleSeqAlignment(msa, annotations=anotationDict)
+    df = pd.DataFrame.from_dict(anotationDict)
+    df.to_csv(csvPath+ "concatenated_matrix_position_anotation.csv", index=False)
+    file = AlignIO.write(msa, destinationPath+ "concatenatedMatrix.phy", "phylip-relaxed")
+    file = AlignIO.write(multipleAlignementList, destinationPath+ "concatenatedMatrix_v2.phy", "phylip-relaxed")
 
 def writeSingleRecordList(tmpFasta, listRec):
     with open(tmpFasta, "w") as file:
@@ -641,8 +713,39 @@ def getPDistMatrix(alignementFile):
     return calculator.get_distance(aln[0])
 
 
-def checkAlignement(alignementFile, alignementPath= settings ["sequenceAlignementResultPath"], pathToFasta = settings["genesFastaResultPath"]):
-    print("alignement check initialised")
+def checkMafftAlignement(alignementFile, alignementPath= settings ["sequenceAlignementResultPath"], pathToFasta = settings["genesFastaResultPath"]):
+    print("alignement check initialised for mafft ")
+    dm = getPDistMatrix(alignementFile)
+    fastaFile = pathToFasta + alignementFile[alignementFile.rfind("/")+1:alignementFile.find("_")] + ".fasta"
+    tmpFasta = fastaFile[:-6] + "_tmp.fasta"
+    listRec= []
+
+    for i in range(len(dm.matrix)):
+        taxonName= dm.names[i]
+        prevPDist = dm.matrix[i][0]
+        if dm.matrix[i][0] > 0.5:
+            listRec = getReversedRecordList(fastaFile, taxonName)
+            writeSingleRecordList(tmpFasta, listRec)
+            tmpAlignement = aligneSequenceWithMafft(tmpFasta)
+            dm2 = getPDistMatrix(tmpAlignement)
+            for j in range(len(dm2.matrix)):
+                if dm2.names[j] == taxonName:
+                    if dm2.matrix[j][0] < prevPDist:
+                        os.remove(fastaFile)
+                        os.remove(alignementFile)
+                        os.rename(tmpFasta, fastaFile)
+                        os.rename(tmpAlignement, alignementFile)
+                        return checkMafftAlignement(alignementFile)
+                    else:
+                        os.remove(tmpFasta)
+                        os.remove(tmpAlignement)
+
+
+    print("alignementCheck finished")
+    return
+
+def checkMuscleAlignement(alignementFile, alignementPath= settings ["sequenceAlignementResultPath"], pathToFasta = settings["genesFastaResultPath"]):
+    print("alignement check initialised for muscle  ")
     dm = getPDistMatrix(alignementFile)
     fastaFile = pathToFasta + alignementFile[alignementFile.rfind("/")+1:alignementFile.find("_")] + ".fasta"
     tmpFasta = fastaFile[:-6] + "_tmp.fasta"
@@ -655,7 +758,7 @@ def checkAlignement(alignementFile, alignementPath= settings ["sequenceAlignemen
             # print(dm.matrix[i][0])
             listRec = getReversedRecordList(fastaFile, taxonName)
             writeSingleRecordList(tmpFasta, listRec)
-            tmpAlignement = aligneSequence(tmpFasta, False, True)
+            tmpAlignement = aligneSequenceWithMuscle(tmpFasta)
             dm2 = getPDistMatrix(tmpAlignement)
             for j in range(len(dm2.matrix)):
                 if dm2.names[j] == taxonName:
@@ -664,7 +767,7 @@ def checkAlignement(alignementFile, alignementPath= settings ["sequenceAlignemen
                         os.remove(alignementFile)
                         os.rename(tmpFasta, fastaFile)
                         os.rename(tmpAlignement, alignementFile)
-                        return checkAlignement(alignementFile)
+                        return  checkMuscleAlignement(alignementFile)
                     else:
                         os.remove(tmpFasta)
                         os.remove(tmpAlignement)
@@ -672,6 +775,8 @@ def checkAlignement(alignementFile, alignementPath= settings ["sequenceAlignemen
 
     print("alignementCheck finished")
     return
+
+
 
 
 
@@ -706,13 +811,23 @@ def run():
     generateLengthSummary(mitogenomeDict)
     generateAccessionIDSummary(mitogenomeDict)
     generateSuperpositionSummary(mitogenomeDict)
-    print("Finish")
-    writeLog("Finish")
+    
 
     for fasta in getFASTAFiles(path=settings ["genesFastaResultPath"]):
-        alignedFile = aligneSequence(settings ["genesFastaResultPath"] + fasta, useMuscle=settings ["useMuscle"], useMafft = settings ["useMafft"] )
-        checkAlignement(alignedFile)
+        if settings["useMuscle"]:
+            alignedFile = aligneSequenceWithMuscle(settings ["genesFastaResultPath"] + fasta)
+            checkMuscleAlignement(alignedFile)
 
+        if settings["useMafft"]:
+            alignedFile = aligneSequenceWithMafft(settings ["genesFastaResultPath"] + fasta)
+            checkMafftAlignement(alignedFile)
+
+    alignementDict, multipleAlignementList = getAlignementDict()
+    generateGlobalConcatenatedAlignementMatrix(alignementDict, mitogenomeDict)
+    # writeConcatenatedMatrix(multipleAlignementList)
+    writeConcatenatedMatrix(alignementDict, mitogenomeDict, multipleAlignementList)
+    print("Finish")
+    writeLog("Finish")
 ################################################################################
 # initialisation of global variable and environement
 setup()
