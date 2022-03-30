@@ -119,25 +119,7 @@ def getGeneDict(path = settings["genesFastaResultPath"]):
 
     return geneDict
 
-def getAlignementDict(path = settings["sequenceAlignementResultPath"]):
-    alignementDict = {}
-    multipleAlignementList = []
-    fileList = os.listdir(path)
-    for file in fileList:
-        if "mafft" in file:
-            geneName = file[file.rfind("/")+1:file.find("_")].replace(".phy","").replace("_", "")
-            if not geneName in alignementDict.keys():
-                alignementDict[geneName] = []
 
-            aln =AlignIO.read(path+file, "phylip-relaxed")
-            multipleAlignementList.append(aln)
-
-            # for aln in AlignIO.parse(path+file, "phylip-relaxed"):
-                # for record in aln:
-            for record in aln:
-                alignementDict[geneName].append((record.id, record.seq, len(record.seq), record))
-
-    return (alignementDict, multipleAlignementList)
 
 
 def isGenomeInSuperpositionDict(gene, valToCheck):
@@ -176,21 +158,7 @@ def getLengthInGeneDict(gene, mitogenomeName):
     return pd.NA
 
 
-def getseqInAlignementDict(alignementDict, gene, mitogenomeName):
-    len = 0
-    for taxon, seq, length, desc   in alignementDict[gene]:
-        len = length
-        if taxon == mitogenomeName: return seq
 
-    return Seq("?"*len)
-
-def getRecordInAlignementDict(alignementDict, gene, mitogenomeName):
-    len = 0
-    for taxon, seq, length, record in alignementDict[gene]:
-        len = length
-        if taxon == mitogenomeName: return record
-
-    return SecRecord(Seq("?"*len), id = mitogenomeName, name = gene, description = "")
 
 #getMitogenome,
 #this function return a tuple containing the id and seq of the mitogenome
@@ -422,6 +390,42 @@ def extractSeqFromCSV(csv, fasta):
     writeRecords(records, mitogenomeName)
     return (mitogenomeName, pd.NA)
 
+def extractSeqFromSingleFasta(fasta, destinationPath = settings["genesFastaResultPath"]):
+    name = str.upper(fasta[fasta.rfind("/")+1:].replace(".fasta", "").replace(" ", "-"))
+    if "_" in name : name = name[:name.find("_")]
+    if "NADH" in name : name = name.replace("NADH", "ND")
+    if "NAD" in name : name = name.replace("NAD", "ND")
+    if name == "COI" : name = "COX1"
+    if name == "COII" : name = "COX2"
+    records = SeqIO.parse(fasta, "fasta")
+    if not name in geneDict .keys() :  geneDict[name] = []
+    listMitogenome = []
+
+    if not os.path.isfile(destinationPath+ name + ".fasta"):
+        SeqIO.write(records, destinationPath+ name + ".fasta", "fasta")
+        
+        for record in SeqIO.parse(destinationPath+ name + ".fasta", "fasta"):
+            listMitogenome.append(record.id)
+            if not isGenomeInGeneDict(name, record.id) : geneDict[name].append((record.id, record.seq, len(record.seq), "-1"))
+            else:
+                log = "unexpectable error happened : \n the gene : " + name + " seams to already exist for the taxon : " + record.id + " although the file for this gene just been created \n Please check if their isn't an isue in the name of your taxon or weerd things \n The error come from the file : " + fasta
+                print(log)
+                writeLog(log)
+
+    # if the file already exist
+    else:
+        file = open(destinationPath + name + ".fasta", "a")
+        for record  in records:
+            listMitogenome.append(record.id)
+            if not isGenomeInGeneDict(name, record.id) : 
+                geneDict[name].append((record.id, record.seq, len(record.seq), "-1"))
+                writer = SeqIO.FastaIO.FastaWriter(file)
+                writer.write_record(record)
+
+        file.close()
+
+    return (listMitogenome, "-1")
+
 #getMitogenomeFromGBFile
 # this function return the mitogenome name, accessionID, and seq from a .gb file
 # @param
@@ -606,17 +610,6 @@ def generateSuperpositionSummary(mitogenomeDict, csvPath= settings["csvResultPat
     df = pd.DataFrame.from_dict(data)
     df.to_csv(csvPath+ "summary_Superposition.csv", index=False)
 
-def generateGlobalConcatenatedAlignementMatrix(alignementDict, mitogenomeDict, csvPath= settings["csvResultPath"]):
-    data={"Taxon":mitogenomeDict.keys()}
-    for genome in mitogenomeDict.keys():
-        for gene in alignementDict.keys():
-            if not gene in data.keys():
-                data[gene] = []
-            
-            data[gene].append(getseqInAlignementDict(alignementDict, gene, genome))
-
-    df = pd.DataFrame.from_dict(data)
-    df.to_csv(csvPath+ "global_concatenated_alignement_matrix.csv", index=False)
 
 
 ################################################################################
@@ -674,7 +667,29 @@ def aligneSequenceWithMafft(fasta, outputLocation = settings["sequenceAlignement
     return outputFile
 
 
-def writeConcatenatedMatrix(alignementDict, mitogenomeDict, multipleAlignementList, destinationPath = settings["sequenceAlignementResultPath"], csvPath = settings["csvResultPath"]):
+def getAlignementDict(alignementType, path = settings["sequenceAlignementResultPath"]):
+    alignementDict = {}
+    fileList = [ file for file in os.listdir(path) if alignementType in file and not "Matrix" in file]
+    for file in fileList:
+        geneName = file[file.rfind("/")+1:file.find("_")].replace(".phy","").replace("_", "")
+        if not geneName in alignementDict.keys(): alignementDict[geneName] = []
+
+        aln =AlignIO.read(path+file, "phylip-relaxed")
+        for record in aln:
+            alignementDict[geneName].append((record.id, record.seq, len(record.seq), record))
+
+    return alignementDict
+
+def getseqInAlignementDict(alignementDict, gene, mitogenomeName):
+    len = 0
+    for taxon, seq, length, desc   in alignementDict[gene]:
+        len = length
+        if taxon == mitogenomeName: return seq
+
+    return Seq("?"*len)
+
+
+def writeConcatenatedMatrix(alignementDict, mitogenomeDict, alignementType, destinationPath = settings["sequenceAlignementResultPath"]):
     data ={}
     anotationDict = {}
     for genome in mitogenomeDict.keys():
@@ -688,21 +703,18 @@ def writeConcatenatedMatrix(alignementDict, mitogenomeDict, multipleAlignementLi
             lenghtCounter = len(data[genome])
 
             
-            # data[gene].append(getseqInAlignementDict(alignementDict, gene, genome))
     msa =[]
     for id, seq in data.items():
         msa.append(SeqRecord(Seq(seq), id = id))
 
     msa = MultipleSeqAlignment(msa, annotations=anotationDict)
-    file = AlignIO.write(msa, destinationPath+ "concatenatedMatrix.phy", "phylip-relaxed")
-    file = AlignIO.write(multipleAlignementList, destinationPath+ "concatenatedMatrix_v2.phy", "phylip-relaxed")
-    # AlignIO.convert(destinationPath+ "concatenatedMatrix.phy", "phylip-relaxed", destinationPath+ "concatenatedMatrix_v3.nex", "nexus", "DNA")
+    file = AlignIO.write(msa, destinationPath+ "globalConcatenatedMatrix_" + alignementType + ".phy", "phylip-relaxed")
     infoLocation = ";" + "\n" + "[BEGIN MrBayes;" + "\n" + "	outgroup OUT1;" + "\n"
     for gene, info in anotationDict.items():
         infoLocation += "	CHARSET " + str(gene) + " = " + info[0] + ";" + "\n"
 
     infoLocation+= "	partition markers = 7: " + str(anotationDict.keys()).replace("[", "").replace("]", "") + "\n" + "end;]"
-    with open(destinationPath+ "concatenatedMatrix.phy", "a") as fileObj:
+    with open(destinationPath+ "globalConcatenatedMatrix_" + alignementType + ".phy", "a") as fileObj:
         fileObj.write(infoLocation)
 
 
@@ -822,14 +834,38 @@ def generateIQTree(alignementFile, outputLocation = settings["treeResultPath"], 
     child= subprocess.Popen(str(iqtree_cline ), stdout = subprocess.PIPE, stderr=subprocess.PIPE,          shell = (sys.platform!="win32"))
     child.wait()
 
-def generateDistanceTree(alignementFile, outputLocation = settings["treeResultPath"]):
-    gene = alignementFile[alignementFile.rfind("/")+1:alignementFile.find("_")]
-    aln = AlignIO.read(alignementFile, 'phylip-relaxed')
-    calculator = DistanceCalculator('identity')
-    dm = calculator.get_distance(aln)
-    constructor = DistanceTreeConstructor(calculator, 'nj')
-    tree =constructor.build_tree(aln)
-    Phylo.write(tree, outputLocation+ gene + "_nj_dist_tree.nhx", "newick")
+
+# function generateDistanceTree
+# this function will creat distance tree for
+# for cds gene, and rRNA, and one for the global concatenation alignement matrix
+# @param
+# @alignementType, the type of alignement, "mafft" or "muscle"
+# @alignementLocation , where the alignement file are located, by default the value is the one set in the settings.py file
+# @outputLocation, where to output the tree files, by default the value is the one set in the settings.py file
+def generateDistanceTree(alignementType, alignementLocation = settings["sequenceAlignementResultPath"], outputLocation = settings["treeResultPath"]):
+    fileList = [ file for file in os.listdir(alignementLocation) if alignementType in file]
+
+    for alignementFile in fileList:
+        if not alignementFile.startswith("TRNA"):
+            gene = alignementFile[:alignementFile.find("_")]
+            if not "Matrix" in alignementFile:
+                aln = AlignIO.read(alignementLocation + alignementFile, 'phylip-relaxed')
+            else:
+                with open(alignementLocation + alignementFile, "r") as tmp:
+                    content = tmp.read()
+                    content = str(content[:content.find(";")])
+                    tmpFile = alignementLocation + alignementFile.replace(".phy", "_tmp.phy")
+                    with open(tmpFile, "w") as tmp2:
+                        tmp2.write(content)
+
+                    aln = AlignIO.read(tmpFile, 'phylip-relaxed')
+                    os.remove(tmpFile)
+
+            calculator = DistanceCalculator('identity')
+            dm = calculator.get_distance(aln)
+            constructor = DistanceTreeConstructor(calculator, 'nj')
+            tree =constructor.build_tree(aln)
+            Phylo.write(tree, outputLocation+ gene +"_" + alignementType+ "_nj_dist_tree.nhx", "newick")
 
 
 
@@ -856,6 +892,12 @@ def run():
     for c, f in couple:
         mitogenomeName, accessionID = extractSeqFromCSV(settings["rawFilePath"] + c, settings["rawFilePath"] + f)
         if mitogenomeName not in mitogenomeDict.keys(): mitogenomeDict[mitogenomeName] = accessionID
+
+    for file in singleFasta:
+        mitogenomes, accessionID = extractSeqFromSingleFasta(settings["rawFilePath"]+file)
+        for mitogenomeName  in mitogenomes:
+            if mitogenomeName not in mitogenomeDict.keys(): mitogenomeDict[mitogenomeName] = accessionID
+
     for file in gbFiles:
         mitogenomeName, accessionID = extractSeqFromGBFile(settings["rawFilePath"] +file)
         if mitogenomeName not in mitogenomeDict.keys(): 
@@ -863,6 +905,7 @@ def run():
         else:
             for acces in accessionID:
                 if not acces in mitogenomeDict[mitogenomeName]: mitogenomeDict[mitogenomeName].append(acces)
+
 
     generatePresenceSummary(mitogenomeDict)
     generateLengthSummary(mitogenomeDict)
@@ -879,12 +922,16 @@ def run():
             alignedFile = aligneSequenceWithMafft(settings ["genesFastaResultPath"] + fasta)
             checkMafftAlignement(alignedFile)
 
-    alignementDict, multipleAlignementList = getAlignementDict()
-    generateGlobalConcatenatedAlignementMatrix(alignementDict, mitogenomeDict)
-    writeConcatenatedMatrix(alignementDict, mitogenomeDict, multipleAlignementList)
-    # generateIQTree(settings["sequenceAlignementResultPath"] + "concatenatedMatrix.phy")
-    # generateIQTree(settings["treeResultPath"] + "COX1_mafft_align.phy")
-    generateDistanceTree(settings["treeResultPath"] + "COX1_mafft_align.phy")
+    if settings["useMuscle"]:
+        alignementDict= getAlignementDict("muscle")
+        writeConcatenatedMatrix(alignementDict, mitogenomeDict, "muscle")
+        generateDistanceTree("muscle")
+
+    if settings["useMafft"]:
+        alignementDict= getAlignementDict("mafft")
+        writeConcatenatedMatrix(alignementDict, mitogenomeDict, "mafft")
+        generateDistanceTree("mafft")
+    
     print("Finish")
     writeLog("Finish")
 ################################################################################
