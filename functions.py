@@ -1,6 +1,6 @@
 # Import
 from setting import *
-import sys, os, platform, subprocess, re
+import sys, os, platform, subprocess, re,time
 from datetime import datetime
 import pandas as pd
 from Bio import SeqIO
@@ -121,13 +121,23 @@ def getGeneDict(path = settings["genesFastaResultPath"]):
 
 
 
-
-def isGenomeInSuperpositionDict(gene, valToCheck):
+# function isGenomeInSuperpositionDict
+# This function return a bollean value, checking if the genome existe in the dictionary
+# @param
+# @gene, the gene corresponding to the key
+# @mitogenomeName, name of the taxon we want to check the presence
+def isGenomeInSuperpositionDict(gene, mitogenomeName):
     for taxon, length in superpositionDict[gene]:
-        if taxon == valToCheck: return True
+        if taxon == mitogenomeName: return True
 
     return False
 
+# function getLengthInSuperpositionDict
+# This function return the length of a sequence, for a given gene and taxonName
+# Or NA, is it's not found
+# @param
+# @gene, the gene corresponding to the key
+# @mitogenomeName, name of the taxon we want to get the length
 def getLengthInSuperpositionDict(gene, mitogenomeName):
     for taxon, length  in superpositionDict[gene]:
         if taxon == mitogenomeName: return length
@@ -136,13 +146,23 @@ def getLengthInSuperpositionDict(gene, mitogenomeName):
 
 
 
-def isGenomeInGeneDict(gene, valToCheck):
+# function isGenomeInGeneDict
+# This function return a bollean value, checking if the genome existe in the dictionary
+# @param
+# @gene, the gene corresponding to the key
+# @taxonName, name of the taxon we want to check the presence
+def isGenomeInGeneDict(gene, taxonName):
     for taxon, seq, length, id  in geneDict[gene]:
-        if taxon == valToCheck:
-            return True
+        if taxon == taxonName: return True
 
     return False
 
+# function getAccesIDInGeneDict
+# This function return the accessID of a sequence, for a given gene and taxonName
+# Or NA, is it's not found
+# @param
+# @gene, the gene corresponding to the key
+# @mitogenomeName, name of the taxon we want to get the accessID
 def getAccesIDInGeneDict(gene, mitogenomeName):
     for taxon, seq, length, id in geneDict[gene]:
         if taxon == mitogenomeName:
@@ -150,6 +170,12 @@ def getAccesIDInGeneDict(gene, mitogenomeName):
 
     return pd.NA
 
+# function getLengthInGeneDict
+# This function return the length of a sequence, for a given gene and taxonName
+# Or NA, is it's not found
+# @param
+# @gene, the gene corresponding to the key
+# @mitogenomeName, name of the taxon we want to get the length
 def getLengthInGeneDict(gene, mitogenomeName):
     for taxon, seq, length, id  in geneDict[gene]:
         if taxon == mitogenomeName:
@@ -161,7 +187,7 @@ def getLengthInGeneDict(gene, mitogenomeName):
 
 
 #getMitogenome,
-#this function return a tuple containing the id and seq of the mitogenome
+#this function return a tuple containing the id and seq of the mitogenome for a fasta file coupled with a csv file
 # @param
 #@fastafile, the fasta fle containing the mitogenome
 def getMitogenome(fastaFile):
@@ -178,7 +204,7 @@ def getMitogenome(fastaFile):
 
 # function correctMinMaxInputError,
 # This function will return only a number extracted from the string in param
-# @param,
+# @param
 # @val, the string to parth
 # @columnName, name of the column we want to check
 # @mtName, name of the mitogenome we are treating
@@ -188,7 +214,7 @@ def correctMinMaxInputError(val, columnName, mtName, geneName):
         val = val.replace(",", "").replace(".", "")
         res = re.findall(r'\b\d+\b', val)[0]
         log = "A correction have been made  on " + mtName + " : " + geneName + " on the column : " + columnName + "\n" + val + " was corrected in : " + res
-        print(log)
+        # print(log)
         writeLog(log)
         return int(res)
     else:
@@ -252,8 +278,14 @@ def writeRecords(listRecords, mtName, destinationPath = settings["classicFastaRe
 
             file.close()
 
-
-def modifySeqInFasta(fileName,mitogenomeName, newSeq):
+# function modifySeqInFasta
+# This function will modify a sequence for a given mitogenome in a given file and 
+#  rewrite the file, overwriting the previous one
+# @param
+# @fileName, name of the file to read and write 
+# @mitogenomeName, name of the mitogenome, equal to the seqID, used to find the correct seq to modify
+# @newSeq, the new sequence to write
+def modifySeqInFasta(fileName, mitogenomeName, newSeq):
     listRec = []
     for record in SeqIO.parse(fileName, "fasta"):
         if record.id == mitogenomeName:
@@ -285,7 +317,7 @@ def checkSuperposition(start, prevEnd, mitogenomeName, prevName, name):
     # log = "Superposition found  for " + mitogenomeName + " between " + prevName + " and " + name + " on the following position : \n" + str(superposedPosition)
     log = str(len(superposedPosition)) + " Superposition found  for " + mitogenomeName + " between " + prevName + " and " + name 
     writeLog(log)
-    print(log)
+    # print(log)
 
     superpositionName = prevName +"/"+ name
     if not superpositionName in superpositionDict.keys():
@@ -306,14 +338,14 @@ def extractSeqFromCSV(csv, fasta):
     df = pd.read_csv(csv, sep=",")
     df = df[df[settings["typeColName"]] != "gene"]
     df = df[df[settings["typeColName"]] != "source"]
-    df[settings["nameColName"]] = df[settings["nameColName"]].str.replace("\s(.*)", "")
-    df[settings["nameColName"]] = df[settings["nameColName"]].str.replace(")", "-")
-    df[settings["nameColName"]] = df[settings["nameColName"]].str.replace("(", "-")
+    df[settings["nameColName"]] = df[settings["nameColName"]].str.replace("\s(.*)", "",  regex=True)
+    df[settings["nameColName"]] = df[settings["nameColName"]].str.replace(r")", "-", regex=False)
+    df[settings["nameColName"]] = df[settings["nameColName"]].str.replace(r"(", "-", regex=False)
     df[settings["nameColName"]] = df[settings["nameColName"]].str.upper()
-    df[settings["nameColName"]] = df[settings["nameColName"]].str.replace("COII", "COX2")
-    df[settings["nameColName"]] = df[settings["nameColName"]].str.replace("COI", "COX1")
-    df[settings["nameColName"]] = df[settings["nameColName"]].str.replace("NADH", "ND")
-    df[settings["nameColName"]] = df[settings["nameColName"]].str.replace("NAD", "ND")
+    df[settings["nameColName"]] = df[settings["nameColName"]].str.replace(r"COII", "COX2",regex=False)
+    df[settings["nameColName"]] = df[settings["nameColName"]].str.replace(r"COI", "COX1", regex=False)
+    df[settings["nameColName"]] = df[settings["nameColName"]].str.replace(r"NADH", "ND", regex=False)
+    df[settings["nameColName"]] = df[settings["nameColName"]].str.replace(r"NAD", "ND", regex=False)
 
     mitogenomeName, mitogenomeSeq, mitogenomeId, fileNumber = getMitogenome(fasta)
     Subseq = []
@@ -389,7 +421,12 @@ def extractSeqFromCSV(csv, fasta):
 # writting the fasta
     writeRecords(records, mitogenomeName)
     return (mitogenomeName, pd.NA)
-
+# function extractSeqFromSingleFasta
+# This function will get the sequence from single fasta (Not paired with a csv)
+# and add them to the global gene-fasta file to witch they correspond
+# @param
+# @fasta, the path to the fasta file to parth
+# @destinationPath, path to the destion where to write the new fasta or to find it if it exist
 def extractSeqFromSingleFasta(fasta, destinationPath = settings["genesFastaResultPath"]):
     name = str.upper(fasta[fasta.rfind("/")+1:].replace(".fasta", "").replace(" ", "-"))
     if "_" in name : name = name[:name.find("_")]
@@ -421,6 +458,11 @@ def extractSeqFromSingleFasta(fasta, destinationPath = settings["genesFastaResul
                 geneDict[name].append((record.id, record.seq, len(record.seq), "-1"))
                 writer = SeqIO.FastaIO.FastaWriter(file)
                 writer.write_record(record)
+
+            else:
+                log = "Unexpected error : the gene " + name + " seams to already exist for the mitogenome : " + record.id + " it's will be ignored in the file : " + fasta + "\n please check what is going on"
+                print(log)
+                writeLog(log)
 
         file.close()
 
@@ -561,6 +603,17 @@ def extractSeqFromGBFile(gbFile):
 
     return (mitogenomeName, listAccession)
 
+
+################################################################################
+# generating csv summaris for a global view on the extracted data
+
+
+# function generatePresenceSummary
+# This function will creat a csv indicating with 1 or 0 the presence of a gene in a taxon
+# @param
+# @mitogenomeDict, a dictionary containing all the mitogenome name found during the data extraction
+# used to creat the first column (Taxon) of the csv
+# @csvPath, path where to write the csv
 def generatePresenceSummary(mitogenomeDict, csvPath= settings["csvResultPath"]):
     data={"Taxon":mitogenomeDict.keys()}
     for genome in mitogenomeDict.keys():
@@ -573,6 +626,14 @@ def generatePresenceSummary(mitogenomeDict, csvPath= settings["csvResultPath"]):
     df = pd.DataFrame.from_dict(data)
     df.to_csv(csvPath+ "summary_presence.csv", index=False)
 
+
+
+# function generateLengthSummary
+# This function will creat a csv containing the length of each sequence found for the gene in the taxon
+# @param
+# @mitogenomeDict, a dictionary containing all the mitogenome name found during the data extraction
+# used to creat the first column (Taxon) of the csv
+# @csvPath, path where to write the csv
 def generateLengthSummary(mitogenomeDict, csvPath= settings["csvResultPath"]):
     data={"Taxon":mitogenomeDict.keys()}
     for genome in mitogenomeDict.keys():
@@ -585,7 +646,12 @@ def generateLengthSummary(mitogenomeDict, csvPath= settings["csvResultPath"]):
     df = pd.DataFrame.from_dict(data)
     df.to_csv(csvPath+ "summary_length.csv", index=False)
 
-
+# function generateAccessionIDSummary
+# this function will creat a csv that give the accessionID for the genes if it's exist
+# @param
+# @mitogenomeDict, a dictionary containing all the mitogenome name found during the data extraction
+# used to creat the first column (Taxon) of the csv
+# @csvPath, path where to write the csv
 def generateAccessionIDSummary(mitogenomeDict, csvPath= settings["csvResultPath"]):
     data={"Taxon":mitogenomeDict.keys()}
     for genome in mitogenomeDict.keys():
@@ -598,6 +664,13 @@ def generateAccessionIDSummary(mitogenomeDict, csvPath= settings["csvResultPath"
     df.to_csv(csvPath+ "summary_accessionID.csv", index=False)
 
 
+
+# function generateSuperpositionSummary
+# this function will creat a csv summarising all the superposition found, indicating the length of it
+# @param
+# @mitogenomeDict, a dictionary containing all the mitogenome name found during the data extraction
+# used to creat the first column (Taxon) of the csv
+# @csvPath, path where to write the csv
 def generateSuperpositionSummary(mitogenomeDict, csvPath= settings["csvResultPath"]):
     data={"Taxon":mitogenomeDict.keys()}
     for genome in mitogenomeDict.keys():
@@ -614,6 +687,16 @@ def generateSuperpositionSummary(mitogenomeDict, csvPath= settings["csvResultPat
 
 ################################################################################
 # Sequence alignement
+
+
+
+
+# function aligneSequenceWithMuscle
+# this function will creat a sequence alignement file (.phy) using the muscle software
+# @param
+# @fasta, path to the fasta file on witch to process the alignement
+# @outputLocation path where to write the alignement file
+# @muscleLocation, path to the muscle executable file
 def aligneSequenceWithMuscle(fasta, outputLocation = settings["sequenceAlignementResultPath"], muscleLocation = settings["musclePath"]):
     osName = platform.system()
     outputFile =""
@@ -639,6 +722,13 @@ def aligneSequenceWithMuscle(fasta, outputLocation = settings["sequenceAlignemen
     os.remove(tmpFile)
     return outputFile
 
+
+# function aligneSequenceWithMafft
+# this function will creat a sequence alignement file (.phy) using the mafft software
+# @param
+# @fasta, path to 
+# @outputLocation path where to write the alignement file
+# @mafftLocation, path to the mafft executable file
 def aligneSequenceWithMafft(fasta, outputLocation = settings["sequenceAlignementResultPath"], mafftLocation = settings["mafftPath"]  ):
     osName = platform.system()
     outputFile =""
@@ -659,14 +749,18 @@ def aligneSequenceWithMafft(fasta, outputLocation = settings["sequenceAlignement
         subprocess.Popen("chmod +x " + mafftEXE, stdout = subprocess.PIPE, stderr=subprocess.PIPE,          shell = (sys.platform!="win32")).wait()
         mafft_cline= os.path.abspath(mafftEXE) + " --auto --out "+ os.path.normpath(tmpFile) + " " + os.path.normpath(fasta)
 
-    print("Commande : \n" + mafft_cline)
+    # print("Commande : \n" + mafft_cline)
     child= subprocess.Popen(str(mafft_cline), stdout = subprocess.PIPE, stderr=subprocess.PIPE,          shell = (sys.platform!="win32"))
     child.wait()
     AlignIO.convert(tmpFile, "fasta", outputFile, "phylip-relaxed")
     os.remove(tmpFile)
     return outputFile
 
-
+# function getAlignementDict
+# this function will parth the alignement file to creat a dictionnary containing the alignement record
+# @param
+# @alignementType, "mafft" or "muscle", type of the alignement you want to work with
+# @path, path where to find the alignement files 
 def getAlignementDict(alignementType, path = settings["sequenceAlignementResultPath"]):
     alignementDict = {}
     fileList = [ file for file in os.listdir(path) if alignementType in file and not "Matrix" in file]
@@ -680,6 +774,13 @@ def getAlignementDict(alignementType, path = settings["sequenceAlignementResultP
 
     return alignementDict
 
+# function getseqInAlignementDict
+# this function return the seq in the alignementDict if it exist
+#  or a sequence of "?" of the correct length if it's not found
+# @param
+# @alignementDict, dictionarry to search in
+# @gene, name of the gene, corresponding to the key
+# @mitogenomeName, name of the mitogenome we want to get the sequence
 def getseqInAlignementDict(alignementDict, gene, mitogenomeName):
     len = 0
     for taxon, seq, length, desc   in alignementDict[gene]:
@@ -688,19 +789,26 @@ def getseqInAlignementDict(alignementDict, gene, mitogenomeName):
 
     return Seq("?"*len)
 
-
+# function writeConcatenatedMatrix
+# this function will output an alignement file containing all the alignement data
+# to build a global concatenated matrix
+# @param
+# @alignementDict, a dictionnary containing the alignement data
+# @mitogenomeDict, a dictionnary containing all the taxon name found during the data extraction
+# @alignementType, "mafft" or "muscle", type of the alignement you want to work with
+# @destinationPath path where to write the file
 def writeConcatenatedMatrix(alignementDict, mitogenomeDict, alignementType, destinationPath = settings["sequenceAlignementResultPath"]):
     data ={}
     anotationDict = {}
     for genome in mitogenomeDict.keys():
-        lenghtCounter = 0
+        lengthCounter= 0
         if not genome in data.keys(): data[genome] = ""
         for gene in alignementDict.keys():
             alignement = str(getseqInAlignementDict(alignementDict, gene, genome))
             if not gene in anotationDict .keys() :
-                anotationDict [gene] =[ str(lenghtCounter+1) + "-" + str(lenghtCounter + len(alignement))]
+                anotationDict [gene] =[ str(lengthCounter+1) + "-" + str(lengthCounter+ len(alignement))]
             data[genome] += alignement
-            lenghtCounter = len(data[genome])
+            lengthCounter= len(data[genome])
 
             
     msa =[]
@@ -719,12 +827,23 @@ def writeConcatenatedMatrix(alignementDict, mitogenomeDict, alignementType, dest
 
 
 
+
+# function writeSingleRecordList
+# this function write a list of record
+# @param
+# @tmpFasta, path to the file to write
+# @listRec, list of record to write
 def writeSingleRecordList(tmpFasta, listRec):
     with open(tmpFasta, "w") as file:
         writer = SeqIO.FastaIO.FastaWriter(file)
         writer.write_file(listRec)
 
 
+# function getReversedRecordList
+# this function return a list of record, with reverse record for the one mentionned in parameter
+# @param
+# fastaFile, name of the fasta file to parth
+# @taxonName, name of the taxon (seqId) to reverse
 def getReversedRecordList(fastaFile, taxonName):
     listRec = []
     for record in SeqIO.parse(fastaFile, "fasta"):
@@ -736,12 +855,25 @@ def getReversedRecordList(fastaFile, taxonName):
 
     return listRec
 
+# function getPDistMatrix
+# this function return a p-distance matrix for the alignement file in parameter
+# @param
+# @alignementFile, alignement file to compute the p-distance matrix
 def getPDistMatrix(alignementFile):
     aln = list(AlignIO.parse(alignementFile, "phylip-relaxed"))
     calculator = DistanceCalculator('identity')
     return calculator.get_distance(aln[0])
 
 
+
+# function checkMafftAlignement
+# this function check the alignement for the mafft program
+# it will check if the p-distance is > to a predefind value, and try to reverse the sequence, and realign the sequence to 
+# check if it increase the alignement quality
+# @param
+# @alignementFile, alignement file to check
+# @alignementPath, path to the alignement file are located, to read and write 
+# @pathToFasta, path where to read / write fasta 
 def checkMafftAlignement(alignementFile, alignementPath= settings ["sequenceAlignementResultPath"], pathToFasta = settings["genesFastaResultPath"]):
     print("alignement check initialised for mafft ")
     dm = getPDistMatrix(alignementFile)
@@ -773,6 +905,15 @@ def checkMafftAlignement(alignementFile, alignementPath= settings ["sequenceAlig
     print("alignementCheck finished")
     return
 
+
+# function checkMuscleAlignement
+# this function check the alignement for the mafft program
+# it will check if the p-distance is > to a predefind value, reverse the concerne sequence, and re align the sequence to 
+# check if it increase the alignement quality
+# @param
+# @alignementFile, alignement file to check
+# @alignementPath, path to the alignement file are located, to read and write 
+# @pathToFasta, path where to read / write fasta 
 def checkMuscleAlignement(alignementFile, alignementPath= settings ["sequenceAlignementResultPath"], pathToFasta = settings["genesFastaResultPath"]):
     print("alignement check initialised for muscle  ")
     dm = getPDistMatrix(alignementFile)
@@ -811,32 +952,8 @@ def checkMuscleAlignement(alignementFile, alignementPath= settings ["sequenceAli
 ################################################################################
 # tree section
 
-def generateIQTree(alignementFile, outputLocation = settings["treeResultPath"], iqtreeLocation = settings["iqtreePath"]):
-    osName = platform.system()
-    outputFile = outputLocation + alignementFile[alignementFile.rfind("/")+1:-6]+ "_tree.phy"
-    tmpFile= outputLocation + alignementFile[alignementFile.rfind("/")+1:-6]+ "_tree.fasta"
-
-    iqtreeEXE= ""
-    iqtree_cline = ""
-    if osName == "Linux":
-        iqtreeEXE= iqtreeLocation  + "iqtree-Linux/bin/iqtree2"
-        subprocess.Popen("chmod +x " + iqtreeEXE, stdout = subprocess.PIPE, stderr=subprocess.PIPE,          shell = (sys.platform!="win32")).wait()
-    elif osName == "Windows":
-        iqtreeEXE= iqtreeLocation  + "iqtree-Windows/bin/iqtree2.exe"
-    elif osName == "Darwin":
-        iqtreeEXE= iqtreeLocation  + "iqtree-MacOSX/bin/iqtree2"
-        subprocess.Popen("chmod +x " + iqtreeEXE, stdout = subprocess.PIPE, stderr=subprocess.PIPE,          shell = (sys.platform!="win32")).wait()
-        
-        
-    # iqtree_cline =os.path.normpath(iqtreeEXE) + " -s " + os.path.normpath(alignementFile) + " -T AUTO"
-    iqtree_cline =os.path.abspath(iqtreeEXE) + " -s " + os.path.abspath(alignementFile) + " -T AUTO -m GTR+I+G"
-    print("Commande : \n" + iqtree_cline )
-    child= subprocess.Popen(str(iqtree_cline ), stdout = subprocess.PIPE, stderr=subprocess.PIPE,          shell = (sys.platform!="win32"))
-    child.wait()
-
-
 # function generateDistanceTree
-# this function will creat distance tree for
+# this function will creat distance tree 
 # for cds gene, and rRNA, and one for the global concatenation alignement matrix
 # @param
 # @alignementType, the type of alignement, "mafft" or "muscle"
@@ -861,11 +978,12 @@ def generateDistanceTree(alignementType, alignementLocation = settings["sequence
                     aln = AlignIO.read(tmpFile, 'phylip-relaxed')
                     os.remove(tmpFile)
 
+            print("Generating distance tree for : " + alignementFile)
             calculator = DistanceCalculator('identity')
             dm = calculator.get_distance(aln)
             constructor = DistanceTreeConstructor(calculator, 'nj')
             tree =constructor.build_tree(aln)
-            Phylo.write(tree, outputLocation+ gene +"_" + alignementType+ "_nj_dist_tree.nhx", "newick")
+            Phylo.write(tree, outputLocation+ gene +"_" + alignementType+ "_nj_dist_tree.tree", "newick")
 
 
 
@@ -877,6 +995,7 @@ def run():
     setup()
     writeLog("Starting treatement", firstTime=True)
     mitogenomeDict = {}
+    t1 = time.time()
     fastaFiles = getFASTAFiles()
     csvFiles = getCSVFiles()
     gbFiles = getGBFiles()
@@ -893,10 +1012,7 @@ def run():
         mitogenomeName, accessionID = extractSeqFromCSV(settings["rawFilePath"] + c, settings["rawFilePath"] + f)
         if mitogenomeName not in mitogenomeDict.keys(): mitogenomeDict[mitogenomeName] = accessionID
 
-    for file in singleFasta:
-        mitogenomes, accessionID = extractSeqFromSingleFasta(settings["rawFilePath"]+file)
-        for mitogenomeName  in mitogenomes:
-            if mitogenomeName not in mitogenomeDict.keys(): mitogenomeDict[mitogenomeName] = accessionID
+    
 
     for file in gbFiles:
         mitogenomeName, accessionID = extractSeqFromGBFile(settings["rawFilePath"] +file)
@@ -906,13 +1022,18 @@ def run():
             for acces in accessionID:
                 if not acces in mitogenomeDict[mitogenomeName]: mitogenomeDict[mitogenomeName].append(acces)
 
+    for file in singleFasta:
+        mitogenomes, accessionID = extractSeqFromSingleFasta(settings["rawFilePath"]+file)
+        for mitogenomeName  in mitogenomes:
+            if mitogenomeName not in mitogenomeDict.keys(): mitogenomeDict[mitogenomeName] = accessionID
 
+# generation of csv summary
     generatePresenceSummary(mitogenomeDict)
     generateLengthSummary(mitogenomeDict)
     generateAccessionIDSummary(mitogenomeDict)
     generateSuperpositionSummary(mitogenomeDict)
     
-
+    # alignemnet of file
     for fasta in getFASTAFiles(path=settings ["genesFastaResultPath"]):
         if settings["useMuscle"]:
             alignedFile = aligneSequenceWithMuscle(settings ["genesFastaResultPath"] + fasta)
@@ -934,6 +1055,9 @@ def run():
     
     print("Finish")
     writeLog("Finish")
+
+
+
 ################################################################################
 # initialisation of global variable and environement
 setup()
