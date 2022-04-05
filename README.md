@@ -63,6 +63,7 @@ organism_2.fasta
 
 The name of the file will be used to name the sequence in the gene fasta file
 
+WARNING : Except the special case above,  do not use "_" in your file name, it will result by an error...
 
 if you are using .gb file, no worries, they will be automaticly rename correctly, you have also a stand alone rename tool in "tools" folder.
 
