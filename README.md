@@ -2,6 +2,9 @@
 
 ################################################################################
 
+
+This script is developped under python 3.
+
 Installation
 To run this program you will need the following package :
 
@@ -45,7 +48,7 @@ in a command prompt (At the same location of the file).
 
 
 
-To use it correctly, you will need atleest two file or one if it's a .gb (genbank) file
+To use it correctly, you will need atleest two file or one if it's a .gb (genbank) file or a single fasta
 An anotation file (.csv) and your mitogenome file (.fasta) that contain only the full sequence of your mitogenome.
 
 The anotation file and the mitogenome file will be paired together, so please make sure that they have the exact same name (Except the extension) and their name refer to the orgnasim they are sequencing as follows :
@@ -66,6 +69,23 @@ if you are using .gb file, no worries, they will be automaticly rename correctly
 By default you need to put your list of paired file in the ressources/raw_data/ folder,
 But feel free to edit the setting.py file to change the default location of your file.
 
+
+if you are using single fasta file, (not paired with a csv anotation),
+It should be a fasta containing reads for a gene.
+Each read inside it should have for sequence ID the name of the taxon.
+exemple :
+file name : 12S.fasta
+file content :
+>JM59
+ATCGGGAT
+>JM58
+ACTGATCGGAT
+...
+
+
+To avoid any problem when running the alignement, please make sure that the absolute path (Path from the root) to the MitoSplitter folder doesn't contain space.
+
+
 Simply run the main.py file and let the magic do its work.
 To get file from genbank, you can find in the tools folder a utility script "genbankDownloader.py" that will download a liste of file based on accessionID stored in a csv file.
 The csv file must be called "list_accessionID.csv" with atleest a column named "accessionID" that contain your accessionID.
@@ -78,7 +98,3 @@ WARNING :  on macOS you might need to install a default ssl certificate with the
 cd /Applications/Python 3.6/
 ./Install Certificates.command
 Change the python version for the one you are using.
-
-
-download link for iqtree : http://www.iqtree.org/#download
-version : 2.2.0
