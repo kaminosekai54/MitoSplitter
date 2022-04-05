@@ -794,12 +794,11 @@ def getAlignementDict(alignementType, path = settings["sequenceAlignementResultP
 # @param
 # @alignementFile, the alignement file on witch to process the correction, (should be fasta)
 def correctGape(alignementFile):
-    listRec = []
-    nucléotyde = ["a", "t", "c", "g", "u", "n"]
+    nucléotyde = ["A", "T", "C", "G", "U", "N"]
 
     msa= AlignIO.read(alignementFile, "fasta")
     for record in msa:
-        seq =str(record.seq)
+        seq =str(record.seq).upper()
         if seq.startswith("-"):
             nucIndex = []
             for nuc in nucléotyde:
@@ -868,13 +867,17 @@ def writeConcatenatedMatrix(alignementDict, mitogenomeDict, alignementType, dest
 
     msa = MultipleSeqAlignment(msa, annotations=anotationDict)
     file = AlignIO.write(msa, destinationPath+ "globalConcatenatedMatrix_" + alignementType + ".phy", "phylip-relaxed")
-    infoLocation = ";" + "\n" + "[BEGIN MrBayes;" + "\n" + "	outgroup OUT1;" + "\n"
+    AlignIO.convert(destinationPath+ "globalConcatenatedMatrix_" + alignementType + ".phy", "phylip-relaxed", destinationPath+ "globalConcatenatedMatrix_" + alignementType + ".nex", "nexus", molecule_type="DNA")
+    infoLocation = "[BEGIN MrBayes;" + "\n" + "	outgroup OUT1;" + "\n"
     for gene, info in anotationDict.items():
         infoLocation += "	CHARSET " + str(gene) + " = " + info[0] + ";" + "\n"
 
     infoLocation+= "	partition markers = 7: " + str(anotationDict.keys()).replace("[", "").replace("]", "") + "\n" + "end;]"
-    with open(destinationPath+ "globalConcatenatedMatrix_" + alignementType + ".phy", "a") as fileObj:
-        fileObj.write(infoLocation)
+    fileContent =""
+    with open(destinationPath+ "globalConcatenatedMatrix_" + alignementType + ".nex", "r") as fileObj:
+        fileContent = str(fileObj.read())
+    with open(destinationPath+ "globalConcatenatedMatrix_" + alignementType + ".nex", "w") as fileObj:
+        fileObj.write(fileContent.replace("end;", infoLocation))
 
 
 
@@ -1011,23 +1014,23 @@ def checkMuscleAlignement(alignementFile, alignementPath= settings ["sequenceAli
 # @alignementLocation , where the alignement file are located, by default the value is the one set in the settings.py file
 # @outputLocation, where to output the tree files, by default the value is the one set in the settings.py file
 def generateDistanceTree(alignementType, alignementLocation = settings["sequenceAlignementResultPath"], outputLocation = settings["treeResultPath"]):
-    fileList = [ file for file in os.listdir(alignementLocation) if alignementType in file]
+    fileList = [ file for file in os.listdir(alignementLocation) if alignementType in file and file.endswith(".phy")]
 
     for alignementFile in fileList:
         if not alignementFile.startswith("TRNA"):
             gene = alignementFile[:alignementFile.find("_")]
-            if not "Matrix" in alignementFile:
-                aln = AlignIO.read(alignementLocation + alignementFile, 'phylip-relaxed')
-            else:
-                with open(alignementLocation + alignementFile, "r") as tmp:
-                    content = tmp.read()
-                    content = str(content[:content.find(";")])
-                    tmpFile = alignementLocation + alignementFile.replace(".phy", "_tmp.phy")
-                    with open(tmpFile, "w") as tmp2:
-                        tmp2.write(content)
+            # if not "Matrix" in alignementFile:
+            aln = AlignIO.read(alignementLocation + alignementFile, 'phylip-relaxed')
+            # else:
+                # with open(alignementLocation + alignementFile, "r") as tmp:
+                    # content = tmp.read()
+                    # content = str(content[:content.find(";")])
+                    # tmpFile = alignementLocation + alignementFile.replace(".phy", "_tmp.phy")
+                    # with open(tmpFile, "w") as tmp2:
+                        # tmp2.write(content)
 
-                    aln = AlignIO.read(tmpFile, 'phylip-relaxed')
-                    os.remove(tmpFile)
+                    # aln = AlignIO.read(tmpFile, 'phylip-relaxed')
+                    # os.remove(tmpFile)
 
             print("Generating distance tree for : " + alignementFile)
             calculator = DistanceCalculator('identity')
@@ -1136,6 +1139,4 @@ def run():
 setup()
 geneDict = getGeneDict()
 superpositionDict={}
-init()
-
-
+init() # to have color in the terminal
