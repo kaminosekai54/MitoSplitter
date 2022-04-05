@@ -2,6 +2,7 @@
 from setting import *
 import sys, os, platform, subprocess, re,time
 from datetime import datetime
+from colorama import Fore, Back, Style, init
 import pandas as pd
 from Bio import SeqIO
 from Bio.Seq import Seq
@@ -55,6 +56,17 @@ def setup():
     # checking if the results/tree folder exist and creat it if not
     if not os.path.isdir("./results/tree"):
         os.makedirs("./results/tree")
+
+
+# utility function to print in color
+def prRed(skk): print("\033[91m {}\033[00m" .format(skk))
+def prGreen(skk): print("\033[92m {}\033[00m" .format(skk))
+def prYellow(skk): print("\033[93m {}\033[00m" .format(skk))
+def prLightPurple(skk): print("\033[94m {}\033[00m" .format(skk))
+def prPurple(skk): print("\033[95m {}\033[00m" .format(skk))
+def prCyan(skk): print("\033[96m {}\033[00m" .format(skk))
+def prLightGray(skk): print("\033[97m {}\033[00m" .format(skk))
+def prBlack(skk): print("\033[98m {}\033[00m" .format(skk))
 
 # log function
 def writeLog(logToWrite, output_path = settings["logPath"], firstTime = False):
@@ -445,8 +457,8 @@ def extractSeqFromSingleFasta(fasta, destinationPath = settings["genesFastaResul
             listMitogenome.append(record.id)
             if not isGenomeInGeneDict(name, record.id) : geneDict[name].append((record.id, record.seq, len(record.seq), "-1"))
             else:
-                log = "unexpectable error happened : \n the gene : " + name + " seams to already exist for the taxon : " + record.id + " although the file for this gene just been created \n Please check if their isn't an isue in the name of your taxon or weerd things \n The error come from the file : " + fasta
-                print(log)
+                log ="WARNING : unexpectable error happened : \n the gene : " + name + " seams to already exist for the taxon : " + record.id + " although the file for this gene just been created \n Please check if their isn't an isue in the name of your taxon or weerd things \n The error come from the file : " + fasta
+                prRed(log)
                 writeLog(log)
 
     # if the file already exist
@@ -460,8 +472,8 @@ def extractSeqFromSingleFasta(fasta, destinationPath = settings["genesFastaResul
                 writer.write_record(record)
 
             else:
-                log = "Unexpected error : the gene " + name + " seams to already exist for the mitogenome : " + record.id + " it's will be ignored in the file : " + fasta + "\n please check what is going on"
-                print(log)
+                log = "WARNIN : Unexpected error : the gene " + name + " seams to already exist for the mitogenome : " + record.id + "\n  It's will be ignored in the file : " + fasta + "\n please check what is going on"
+                prRed(log)
                 writeLog(log)
 
         file.close()
@@ -718,6 +730,7 @@ def aligneSequenceWithMuscle(fasta, outputLocation = settings["sequenceAlignemen
     muscle_cline= muscleEXE + " -align " + os.path.normpath(fasta) + " -output " + os.path.normpath(tmpFile)
     child= subprocess.Popen(str(muscle_cline), stdout = subprocess.PIPE, stderr=subprocess.PIPE,          shell = (sys.platform!="win32"))
     child.wait()
+    correctGape(tmpFile)
     AlignIO.convert(tmpFile, "fasta", outputFile, "phylip-relaxed")
     os.remove(tmpFile)
     return outputFile
@@ -752,6 +765,7 @@ def aligneSequenceWithMafft(fasta, outputLocation = settings["sequenceAlignement
     # print("Commande : \n" + mafft_cline)
     child= subprocess.Popen(str(mafft_cline), stdout = subprocess.PIPE, stderr=subprocess.PIPE,          shell = (sys.platform!="win32"))
     child.wait()
+    correctGape(tmpFile)
     AlignIO.convert(tmpFile, "fasta", outputFile, "phylip-relaxed")
     os.remove(tmpFile)
     return outputFile
@@ -773,6 +787,43 @@ def getAlignementDict(alignementType, path = settings["sequenceAlignementResultP
             alignementDict[geneName].append((record.id, record.seq, len(record.seq), record))
 
     return alignementDict
+
+# function correctGape
+# this function will replace the gape on the begining and 
+# end of the align sequence by "?", for unknown data, for a better accuracy for the trees
+# @param
+# @alignementFile, the alignement file on witch to process the correction, (should be fasta)
+def correctGape(alignementFile):
+    listRec = []
+    nucléotyde = ["a", "t", "c", "g", "u", "n"]
+
+    msa= AlignIO.read(alignementFile, "fasta")
+    for record in msa:
+        seq =str(record.seq)
+        if seq.startswith("-"):
+            nucIndex = []
+            for nuc in nucléotyde:
+                if seq.find(nuc) != -1 : nucIndex.append(seq.find(nuc))
+
+            nucIndex.sort()
+            seq= seq[:nucIndex[0]].replace("-", "?") + seq[nucIndex[0]:]
+
+
+        # correction of end gape
+        if seq.endswith("-"):
+            nucIndex = []
+            for nuc in nucléotyde:
+                if seq.rfind(nuc) != -1 : nucIndex.append(seq.rfind(nuc))
+
+            nucIndex.sort()
+            seq= seq[:nucIndex[-1]]  + seq[nucIndex[-1]:].replace("-", "?")
+
+
+        record.seq= Seq(seq)
+
+    AlignIO.write(msa, alignementFile,  "fasta")    
+
+
 
 # function getseqInAlignementDict
 # this function return the seq in the alignementDict if it exist
@@ -995,7 +1046,7 @@ def run():
     setup()
     writeLog("Starting treatement", firstTime=True)
     mitogenomeDict = {}
-    t1 = time.time()
+    tExtraction = time.time()
     fastaFiles = getFASTAFiles()
     csvFiles = getCSVFiles()
     gbFiles = getGBFiles()
@@ -1011,9 +1062,7 @@ def run():
     for c, f in couple:
         mitogenomeName, accessionID = extractSeqFromCSV(settings["rawFilePath"] + c, settings["rawFilePath"] + f)
         if mitogenomeName not in mitogenomeDict.keys(): mitogenomeDict[mitogenomeName] = accessionID
-
     
-
     for file in gbFiles:
         mitogenomeName, accessionID = extractSeqFromGBFile(settings["rawFilePath"] +file)
         if mitogenomeName not in mitogenomeDict.keys(): 
@@ -1026,34 +1075,58 @@ def run():
         mitogenomes, accessionID = extractSeqFromSingleFasta(settings["rawFilePath"]+file)
         for mitogenomeName  in mitogenomes:
             if mitogenomeName not in mitogenomeDict.keys(): mitogenomeDict[mitogenomeName] = accessionID
+    tExtraction = time.time() - tExtraction
+    tSummaryGeneration = time.time()
 
 # generation of csv summary
     generatePresenceSummary(mitogenomeDict)
     generateLengthSummary(mitogenomeDict)
     generateAccessionIDSummary(mitogenomeDict)
     generateSuperpositionSummary(mitogenomeDict)
-    
-    # alignemnet of file
-    for fasta in getFASTAFiles(path=settings ["genesFastaResultPath"]):
-        if settings["useMuscle"]:
+    tSummaryGeneration= time.time() - tSummaryGeneration
+
+    tMuscleAlignement = time.time()
+    tMafftAlignement = time.time()
+    # Alignement of file
+    if settings["useMuscle"]:
+        for fasta in getFASTAFiles(path=settings ["genesFastaResultPath"]):
             alignedFile = aligneSequenceWithMuscle(settings ["genesFastaResultPath"] + fasta)
             checkMuscleAlignement(alignedFile)
+        tMuscleAlignement = time.time() - tMuscleAlignement
 
-        if settings["useMafft"]:
+    if settings["useMafft"]:
+        for fasta in getFASTAFiles(path=settings ["genesFastaResultPath"]):
             alignedFile = aligneSequenceWithMafft(settings ["genesFastaResultPath"] + fasta)
             checkMafftAlignement(alignedFile)
+        tMafftAlignement = time.time() - tMafftAlignement
 
-    if settings["useMuscle"]:
+
+    tMuscleTree = time.time()
+    tMafftTree = time.time()
+    if   settings["useMuscle"]:
         alignementDict= getAlignementDict("muscle")
         writeConcatenatedMatrix(alignementDict, mitogenomeDict, "muscle")
         generateDistanceTree("muscle")
+        tMuscleTree= time.time() - tMuscleTree
 
     if settings["useMafft"]:
         alignementDict= getAlignementDict("mafft")
         writeConcatenatedMatrix(alignementDict, mitogenomeDict, "mafft")
         generateDistanceTree("mafft")
+        tMafftTree = time.time() - tMafftTree
+
+
+    prYellow("Data extraction was made in : "+ str(tExtraction) + " Secondes")
+
+    if settings["useMuscle"]:
+        prYellow("Muscle Alignement and their check was made in : " + str(tMuscleAlignement) + " Secondes")
+        prYellow("Distance tree based on muscle alignement was made in : " + str(tMuscleTree) + " Secondes")
+
+    if settings["useMafft"]:
+        prYellow("Mafft Alignement and their check was made in : " + str(tMafftAlignement) + " Secondes")
+        prYellow("Distance tree based on mafft alignement was made in : " + str(tMafftTree) + " Secondes")
     
-    print("Finish")
+    prGreen("Finish")
     writeLog("Finish")
 
 
@@ -1063,3 +1136,6 @@ def run():
 setup()
 geneDict = getGeneDict()
 superpositionDict={}
+init()
+
+
