@@ -278,8 +278,8 @@ def writeRecords(listRecords, mtName, destinationPath = settings["classicFastaRe
                     elif id == "-1":
                         geneDict[record.name][i] = (record.id, record.seq, len(record.seq), record.description)
                     elif "csv_" in id:
-                        x = int(id[id.find("_")+1:])
-                        y = int(record.description[record.description.find("_")+1:])
+                        x = int(id[id.rfind("_")+1:])
+                        y = int(record.description[record.description.rfind("_")+1:])
                         if y == x+1:
                             newSeq = seq + record.seq
                             modifySeqInFasta(fileName,mt, newSeq)
