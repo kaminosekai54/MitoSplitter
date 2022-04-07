@@ -343,7 +343,7 @@ def checkSuperposition(start, prevEnd, mitogenomeName, prevName, name):
 # @param,
 # @csv, the csv file
 # @fasta, the fastafile
-def extractSeqFromCSV(csv, fasta):
+def extractSeqFromCSV(csv, fasta, destinationPath = settings["classicFastaResultPath"], destinationPath2 = settings["genesFastaResultPath"], csvPath= settings["csvResultPath"]):
     log = "Starting extraction for " + csv
     print(log)
     writeLog(log)
@@ -416,7 +416,7 @@ def extractSeqFromCSV(csv, fasta):
             writeLog(log)
 
     df = df.assign(Subsequence = Subseq)
-    df.to_csv(settings["csvResultPath"] + csv[csv.rfind("/")+1:].replace(".csv","") + "_with_sequence.csv", index= False)
+    df.to_csv(csvPath + csv[csv.rfind("/")+1:].replace(".csv","") + "_with_sequence.csv", index= False)
 
     leu1Found = "TRNA-LEU1" in listName
     leu2Found = "TRNA-LEU2" in listName
@@ -431,15 +431,17 @@ def extractSeqFromCSV(csv, fasta):
 
 
 # writting the fasta
-    writeRecords(records, mitogenomeName)
+    writeRecords(records, mitogenomeName, destinationPath , destinationPath2 )
     return (mitogenomeName, pd.NA)
+
+
 # function extractSeqFromSingleFasta
 # This function will get the sequence from single fasta (Not paired with a csv)
 # and add them to the global gene-fasta file to witch they correspond
 # @param
 # @fasta, the path to the fasta file to parth
 # @destinationPath, path to the destion where to write the new fasta or to find it if it exist
-def extractSeqFromSingleFasta(fasta, destinationPath = settings["genesFastaResultPath"]):
+def extractSeqFromSingleFasta(fasta, destinationPath = settings["classicFastaResultPath"], destinationPath2 = settings["genesFastaResultPath"]):
     name = str.upper(fasta[fasta.rfind("/")+1:].replace(".fasta", "").replace(" ", "-"))
     if "_" in name : name = name[:name.find("_")]
     if "NADH" in name : name = name.replace("NADH", "ND")
@@ -499,7 +501,7 @@ def getMitogenomeFromGBFile(gbFile):
 # it will also rename it if need it
 # @param
 # @gbFile, the genbank file to deal with
-def extractSeqFromGBFile(gbFile):
+def extractSeqFromGBFile(gbFile, destinationPath = settings["classicFastaResultPath"], destinationPath2 = settings["genesFastaResultPath"]):
     log = "Starting extraction for " + gbFile
     print(log)
     writeLog(log)
@@ -600,7 +602,7 @@ def extractSeqFromGBFile(gbFile):
         if record.name == "TRNA-SER" and not ser1Found and ser2Found : record.name = record.name +"1"
         if record.name == "TRNA-SER" and ser1Found and not ser2Found : record.name = record.name +"2"
 
-    writeRecords(listRecords, mitogenomeName)
+    writeRecords(listRecords, mitogenomeName, destinationPath, destinationPath2 )
 
     # check for rename
     if gbFile[gbFile.rfind("/")+1:-3] != mitogenomeName and needRename:
@@ -727,7 +729,7 @@ def aligneSequenceWithMuscle(fasta, outputLocation = settings["sequenceAlignemen
         muscleEXE=muscleLocation+"muscle5.1.macos_intel64"
         subprocess.Popen("chmod +x " + muscleEXE, stdout = subprocess.PIPE, stderr=subprocess.PIPE,          shell = (sys.platform!="win32")).wait()
 
-    muscle_cline= muscleEXE + " -align " + os.path.normpath(fasta) + " -output " + os.path.normpath(tmpFile)
+    muscle_cline= muscleEXE + " -align " + os.path.abspath(fasta) + " -output " + os.path.abspath(tmpFile)
     child= subprocess.Popen(str(muscle_cline), stdout = subprocess.PIPE, stderr=subprocess.PIPE,          shell = (sys.platform!="win32"))
     child.wait()
     correctGape(tmpFile)
@@ -756,11 +758,11 @@ def aligneSequenceWithMafft(fasta, outputLocation = settings["sequenceAlignement
         subprocess.Popen("chmod +x " + mafftEXE, stdout = subprocess.PIPE, stderr=subprocess.PIPE,          shell = (sys.platform!="win32")).wait()
     elif osName == "Windows":
         mafftEXE= mafftLocation + "mafft-win/mafft.bat"
-        mafft_cline= "cmd.exe /C " + os.path.abspath(mafftEXE) + " --auto --out "+ os.path.normpath(tmpFile) + " " + os.path.normpath(fasta)
+        mafft_cline= "cmd.exe /C " + os.path.abspath(mafftEXE) + " --auto --out "+ os.path.abspath(tmpFile) + " " + os.path.abspath(fasta)
     elif osName == "Darwin":
         mafftEXE= mafftLocation +"mafft-mac/mafft.bat"
         subprocess.Popen("chmod +x " + mafftEXE, stdout = subprocess.PIPE, stderr=subprocess.PIPE,          shell = (sys.platform!="win32")).wait()
-        mafft_cline= os.path.abspath(mafftEXE) + " --auto --out "+ os.path.normpath(tmpFile) + " " + os.path.normpath(fasta)
+        mafft_cline= os.path.abspath(mafftEXE) + " --auto --out "+ os.path.abspath(tmpFile) + " " + os.path.abspath(fasta)
 
     # print("Commande : \n" + mafft_cline)
     child= subprocess.Popen(str(mafft_cline), stdout = subprocess.PIPE, stderr=subprocess.PIPE,          shell = (sys.platform!="win32"))
@@ -787,6 +789,22 @@ def getAlignementDict(alignementType, path = settings["sequenceAlignementResultP
             alignementDict[geneName].append((record.id, record.seq, len(record.seq), record))
 
     return alignementDict
+
+
+# function getAlignedMitogenomeDict    
+# this function will parse the alignement file to creat a dictionnary containing the mitogenme name foundable in the records
+# @param
+# @alignementType, "mafft" or "muscle", type of the alignement you want to work with
+# @path, path where to find the alignement files 
+def getAlignedMitogenomeDict    (alignementType, path = settings["sequenceAlignementResultPath"]):
+    alignedMitogenomeDict    = {}
+    fileList = [ file for file in os.listdir(path) if alignementType in file and not "Matrix" in file]
+    for file in fileList:
+        aln =AlignIO.read(path+file, "phylip-relaxed")
+        for record in aln:
+            if not record.id in alignedMitogenomeDict    .keys() : alignedMitogenomeDict    [record.id]= "", record
+
+    return alignedMitogenomeDict    
 
 # function correctGape
 # this function will replace the gape on the begining and 
@@ -928,7 +946,7 @@ def getPDistMatrix(alignementFile):
 # @alignementFile, alignement file to check
 # @alignementPath, path to the alignement file are located, to read and write 
 # @pathToFasta, path where to read / write fasta 
-def checkMafftAlignement(alignementFile, alignementPath= settings ["sequenceAlignementResultPath"], pathToFasta = settings["genesFastaResultPath"]):
+def checkMafftAlignement(alignementFile, alignementPath= settings ["sequenceAlignementResultPath"], pathToFasta = settings["genesFastaResultPath"], mafftLocation = settings["mafftPath"]):
     print("alignement check initialised for mafft ")
     dm = getPDistMatrix(alignementFile)
     fastaFile = pathToFasta + alignementFile[alignementFile.rfind("/")+1:alignementFile.find("_")] + ".fasta"
@@ -941,7 +959,7 @@ def checkMafftAlignement(alignementFile, alignementPath= settings ["sequenceAlig
         if dm.matrix[i][0] > 0.5:
             listRec = getReversedRecordList(fastaFile, taxonName)
             writeSingleRecordList(tmpFasta, listRec)
-            tmpAlignement = aligneSequenceWithMafft(tmpFasta)
+            tmpAlignement = aligneSequenceWithMafft(tmpFasta, outputLocation=alignementPath, mafftLocation=mafftLocation)
             dm2 = getPDistMatrix(tmpAlignement)
             for j in range(len(dm2.matrix)):
                 if dm2.names[j] == taxonName:
@@ -950,7 +968,7 @@ def checkMafftAlignement(alignementFile, alignementPath= settings ["sequenceAlig
                         os.remove(alignementFile)
                         os.rename(tmpFasta, fastaFile)
                         os.rename(tmpAlignement, alignementFile)
-                        return checkMafftAlignement(alignementFile)
+                        return checkMafftAlignement(alignementFile, alignementPath, pathToFasta , mafftLocation)
                     else:
                         os.remove(tmpFasta)
                         os.remove(tmpAlignement)
@@ -968,7 +986,7 @@ def checkMafftAlignement(alignementFile, alignementPath= settings ["sequenceAlig
 # @alignementFile, alignement file to check
 # @alignementPath, path to the alignement file are located, to read and write 
 # @pathToFasta, path where to read / write fasta 
-def checkMuscleAlignement(alignementFile, alignementPath= settings ["sequenceAlignementResultPath"], pathToFasta = settings["genesFastaResultPath"]):
+def checkMuscleAlignement(alignementFile, alignementPath= settings ["sequenceAlignementResultPath"], pathToFasta = settings["genesFastaResultPath"], muscleLocation = settings["musclePath"]):
     print("alignement check initialised for muscle  ")
     dm = getPDistMatrix(alignementFile)
     fastaFile = pathToFasta + alignementFile[alignementFile.rfind("/")+1:alignementFile.find("_")] + ".fasta"
@@ -982,7 +1000,7 @@ def checkMuscleAlignement(alignementFile, alignementPath= settings ["sequenceAli
             # print(dm.matrix[i][0])
             listRec = getReversedRecordList(fastaFile, taxonName)
             writeSingleRecordList(tmpFasta, listRec)
-            tmpAlignement = aligneSequenceWithMuscle(tmpFasta)
+            tmpAlignement = aligneSequenceWithMuscle(tmpFasta, outputLocation=alignementPath, muscleLocation=muscleLocation)
             dm2 = getPDistMatrix(tmpAlignement)
             for j in range(len(dm2.matrix)):
                 if dm2.names[j] == taxonName:
@@ -991,7 +1009,7 @@ def checkMuscleAlignement(alignementFile, alignementPath= settings ["sequenceAli
                         os.remove(alignementFile)
                         os.rename(tmpFasta, fastaFile)
                         os.rename(tmpAlignement, alignementFile)
-                        return  checkMuscleAlignement(alignementFile)
+                        return  checkMuscleAlignement(alignementFile, alignementPath, pathToFasta , muscleLocation)
                     else:
                         os.remove(tmpFasta)
                         os.remove(tmpAlignement)
@@ -1019,18 +1037,7 @@ def generateDistanceTree(alignementType, alignementLocation = settings["sequence
     for alignementFile in fileList:
         if not alignementFile.startswith("TRNA"):
             gene = alignementFile[:alignementFile.find("_")]
-            # if not "Matrix" in alignementFile:
             aln = AlignIO.read(alignementLocation + alignementFile, 'phylip-relaxed')
-            # else:
-                # with open(alignementLocation + alignementFile, "r") as tmp:
-                    # content = tmp.read()
-                    # content = str(content[:content.find(";")])
-                    # tmpFile = alignementLocation + alignementFile.replace(".phy", "_tmp.phy")
-                    # with open(tmpFile, "w") as tmp2:
-                        # tmp2.write(content)
-
-                    # aln = AlignIO.read(tmpFile, 'phylip-relaxed')
-                    # os.remove(tmpFile)
 
             print("Generating distance tree for : " + alignementFile)
             calculator = DistanceCalculator('identity')

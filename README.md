@@ -4,6 +4,11 @@
 
 
 This script is developped under python 3.
+Make sure that your default ython version is 3.x by the following command :
+python --version
+If not, please install python3 or if you already have it, either se it up as the default version, or add "3" to the "pip" commande and "python" commande:
+python3 main.py
+pip3 install pandas
 
 Installation
 To run this program you will need the following package :
@@ -11,6 +16,7 @@ To run this program you will need the following package :
 -- pandas
 -- biopython
 -- re
+-- colorama 
 
 First make sure you have pip installed, or install it  by following the instruction here :
 https://pip.pypa.io/en/stable/installation/
@@ -19,12 +25,14 @@ To install them via pip
  pip install pandas
  pip install biopython
  pip install re
+ pip install colorama 
  
  
  If you are using conda  :
  conda install pandas
  conda install biopython
  conda install re
+ conda install colorama 
  
  
  This program also use  muscle 5.1 	ns mafft 7.5. They are included in the tools folder, but feel free to réinstall them if you enconter any issue.
