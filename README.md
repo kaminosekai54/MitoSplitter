@@ -107,3 +107,15 @@ WARNING :  on macOS you might need to install a default ssl certificate with the
 cd /Applications/Python 3.6/
 ./Install Certificates.command
 Change the python version for the one you are using.
+
+
+You can add or delete gene that will be recorded by ading them or deleting them in the setting.py file.
+
+you will find something like :
+"geneToDetect":["12S", "COX1",
+]
+
+Juste add the name of the gene you want to add, andif its encontered, it will it add as well :
+"geneToDetect":[
+"12S", "COX1", "NAD1",
+]

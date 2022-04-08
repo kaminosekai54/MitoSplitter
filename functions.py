@@ -375,45 +375,47 @@ def extractSeqFromCSV(csv, fasta, destinationPath = settings["classicFastaResult
         min = correctMinMaxInputError(str(df[settings["minColName"]][i]), settings["minColName"], mitogenomeName, name) -1
         max = correctMinMaxInputError(str(df[settings["maxColName"]][i]), settings["maxColName"], mitogenomeName, name)
 
-        if i+1 < len(df.index) and i+1 in df.index :
-            nextName = df[settings["nameColName"]][i+1]
+        if name in settings["geneToDetect"]:
 
-        if min >= 0 and max <= len(mitogenomeSeq):
-            if lastMax == -1 : lastMax = max-1
+            if i+1 < len(df.index) and i+1 in df.index :
+                nextName = df[settings["nameColName"]][i+1]
 
-            # treatement for superposed position
-            if min >= lastMax and nbTreated >0:
-                superposedSeq.append(checkSuperposition(min, lastMax, mitogenomeName, df[settings["nameColName"]][lastIndex], name))
+            if min >= 0 and max <= len(mitogenomeSeq):
+                if lastMax == -1 : lastMax = max-1
 
-                #  common treatement
-            if name == "TRNA-LEU":
-                if prevName == "COX1" and nextName == "COX2": name = name +"1"
-                elif prevName == "COX1" : name = name +"1"
-                elif nextName == "COX2": name = name +"1"
-                elif (prevName == "ND1" or prevName == "NAD1")and nextName == "16S" : name = name +"2"
-                elif (prevName == "ND1" or prevName == "NAD1"): name = name +"2"
-                elif nextName == "16S" : name = name +"2"
+                # treatement for superposed position
+                if min >= lastMax and nbTreated >0:
+                    superposedSeq.append(checkSuperposition(min, lastMax, mitogenomeName, df[settings["nameColName"]][lastIndex], name))
 
-            if name == "TRNA-SER":
-                if prevName == "TRNA-ASN" and nextName == "TRNA-GLU" : name = name +"1"
-                elif prevName == "TRNA-ASN" : name = name +"1"
-                elif nextName == "TRNA-GLU" : name = name +"1"
-                elif prevName == "CYTB" and (nextName == "ND1" or nextName == "NAD1") : name = name +"2"
-                elif prevName == "CYTB": name = name +"2"
-                elif (nextName == "ND1" or nextName == "NAD1") : name = name +"2"
-            Subseq.append(mitogenomeSeq[min : max])
-            record = SeqRecord(mitogenomeSeq[min : max], id=mitogenomeName, name=name, description=str(fileNumber))
-            records.append(record)
-            listName.append(name)
-            lastMax = max
-            lastIndex=i
-            nbTreated+=1
-            prevName= name
-        else:
-            Subseq.append(pd.NA)
-            log = "The sequence : " + name + " from the mitogenome " + mitogenomeName + " from the file " + csv + "has not been found"
-            print(log)
-            writeLog(log)
+                    #  common treatement
+                if name == "TRNA-LEU":
+                    if prevName == "COX1" and nextName == "COX2": name = name +"1"
+                    elif prevName == "COX1" : name = name +"1"
+                    elif nextName == "COX2": name = name +"1"
+                    elif (prevName == "ND1" or prevName == "NAD1")and nextName == "16S" : name = name +"2"
+                    elif (prevName == "ND1" or prevName == "NAD1"): name = name +"2"
+                    elif nextName == "16S" : name = name +"2"
+
+                if name == "TRNA-SER":
+                    if prevName == "TRNA-ASN" and nextName == "TRNA-GLU" : name = name +"1"
+                    elif prevName == "TRNA-ASN" : name = name +"1"
+                    elif nextName == "TRNA-GLU" : name = name +"1"
+                    elif prevName == "CYTB" and (nextName == "ND1" or nextName == "NAD1") : name = name +"2"
+                    elif prevName == "CYTB": name = name +"2"
+                    elif (nextName == "ND1" or nextName == "NAD1") : name = name +"2"
+                Subseq.append(mitogenomeSeq[min : max])
+                record = SeqRecord(mitogenomeSeq[min : max], id=mitogenomeName, name=name, description=str(fileNumber))
+                records.append(record)
+                listName.append(name)
+                lastMax = max
+                lastIndex=i
+                nbTreated+=1
+                prevName= name
+            else:
+                Subseq.append(pd.NA)
+                log = "The sequence : " + name + " from the mitogenome " + mitogenomeName + " from the file " + csv + "has not been found"
+                print(log)
+                writeLog(log)
 
     df = df.assign(Subsequence = Subseq)
     df.to_csv(csvPath + csv[csv.rfind("/")+1:].replace(".csv","") + "_with_sequence.csv", index= False)
@@ -449,36 +451,37 @@ def extractSeqFromSingleFasta(fasta, destinationPath = settings["classicFastaRes
     if name == "COI" : name = "COX1"
     if name == "COII" : name = "COX2"
     records = SeqIO.parse(fasta, "fasta")
-    if not name in geneDict .keys() :  geneDict[name] = []
-    listMitogenome = []
+    if name in setting["geneToDetect"]:
+        if not name in geneDict .keys() :  geneDict[name] = []
+        listMitogenome = []
 
-    if not os.path.isfile(destinationPath+ name + ".fasta"):
-        SeqIO.write(records, destinationPath+ name + ".fasta", "fasta")
+        if not os.path.isfile(destinationPath+ name + ".fasta"):
+            SeqIO.write(records, destinationPath+ name + ".fasta", "fasta")
         
-        for record in SeqIO.parse(destinationPath+ name + ".fasta", "fasta"):
-            listMitogenome.append(record.id)
-            if not isGenomeInGeneDict(name, record.id) : geneDict[name].append((record.id, record.seq, len(record.seq), "-1"))
-            else:
-                log ="WARNING : unexpectable error happened : \n the gene : " + name + " seams to already exist for the taxon : " + record.id + " although the file for this gene just been created \n Please check if their isn't an isue in the name of your taxon or weerd things \n The error come from the file : " + fasta
-                prRed(log)
-                writeLog(log)
+            for record in SeqIO.parse(destinationPath+ name + ".fasta", "fasta"):
+                listMitogenome.append(record.id)
+                if not isGenomeInGeneDict(name, record.id) : geneDict[name].append((record.id, record.seq, len(record.seq), "-1"))
+                else:
+                    log ="WARNING : unexpectable error happened : \n the gene : " + name + " seams to already exist for the taxon : " + record.id + " although the file for this gene just been created \n Please check if their isn't an isue in the name of your taxon or weerd things \n The error come from the file : " + fasta
+                    prRed(log)
+                    writeLog(log)
 
-    # if the file already exist
-    else:
-        file = open(destinationPath + name + ".fasta", "a")
-        for record  in records:
-            listMitogenome.append(record.id)
-            if not isGenomeInGeneDict(name, record.id) : 
-                geneDict[name].append((record.id, record.seq, len(record.seq), "-1"))
-                writer = SeqIO.FastaIO.FastaWriter(file)
-                writer.write_record(record)
+        # if the file already exist
+        else:
+            file = open(destinationPath + name + ".fasta", "a")
+            for record  in records:
+                listMitogenome.append(record.id)
+                if not isGenomeInGeneDict(name, record.id) : 
+                    geneDict[name].append((record.id, record.seq, len(record.seq), "-1"))
+                    writer = SeqIO.FastaIO.FastaWriter(file)
+                    writer.write_record(record)
 
-            else:
-                log = "WARNIN : Unexpected error : the gene " + name + " seams to already exist for the mitogenome : " + record.id + "\n  It's will be ignored in the file : " + fasta + "\n please check what is going on"
-                prRed(log)
-                writeLog(log)
+                else:
+                    log = "WARNIN : Unexpected error : the gene " + name + " seams to already exist for the mitogenome : " + record.id + "\n  It's will be ignored in the file : " + fasta + "\n please check what is going on"
+                    prRed(log)
+                    writeLog(log)
 
-        file.close()
+            file.close()
 
     return (listMitogenome, "-1")
 
@@ -539,6 +542,7 @@ def extractSeqFromGBFile(gbFile, destinationPath = settings["classicFastaResultP
                 elif gene.type == "rRNA":
                     name = gene.qualifiers["product"][0][:gene.qualifiers["product"][0].find(" ")]
 
+                
                 if nextIndex < len(record.features):
                     if record.features[nextIndex].type == "tRNA":
                         nextName= str.upper(record.features[nextIndex].qualifiers["product"][0])
@@ -551,9 +555,6 @@ def extractSeqFromGBFile(gbFile, destinationPath = settings["classicFastaResultP
                     end= correctMinMaxInputError(str(gene.location.end), "Maximum",mitogenomeName,name)
                     strand = gene.location.strand
                     seq = Seq(mitogenomeSeq [start:end])
-                    # if strand == -1:
-                        # print("need revers")
-                        # seq = seq.reverse_complement()
                     name = str.upper(name)
 
 
@@ -577,19 +578,20 @@ def extractSeqFromGBFile(gbFile, destinationPath = settings["classicFastaResultP
                         elif prevName == "CYTB": name = name +"2"
                         elif (nextName == "ND1" or nextName == "NAD1") : name = name +"2"
 
-                    record = SeqRecord(seq, id=mitogenomeName, name=name, description= accessionID)
-                    listRecords.append(record)
-                    listGene.append(name)
+                    if name in settings["geneToDetect"]:
+                        record = SeqRecord(seq, id=mitogenomeName, name=name, description= accessionID)
+                        listRecords.append(record)
+                        listGene.append(name)
 
-                    if nbTreated > 0 and prevType !=  "" and prevType != "source" and gene.type != "misc_feature":
-                        checkSuperposition(start, prevEnd, mitogenomeName, listGene[-2], name)
+                        if nbTreated > 0 and prevType !=  "" and prevType != "source" and gene.type != "misc_feature":
+                            checkSuperposition(start, prevEnd, mitogenomeName, listGene[-2], name)
 
-                    nbTreated+=1
-                    prevEnd=gene.location.end
-                    prevType= gene.type
-                    prevName= name
-                    nextIndex+=1
-                    listName.append(name)
+                        nbTreated+=1
+                        prevEnd=gene.location.end
+                        prevType= gene.type
+                        prevName= name
+                        nextIndex+=1
+                        listName.append(name)
 
     
     leu1Found = "TRNA-LEU1" in listName
@@ -704,6 +706,67 @@ def generateSuperpositionSummary(mitogenomeDict, csvPath= settings["csvResultPat
 
 
 
+
+def getTranslationTable():
+    codonTable = {
+        'ATA':'I', 'ATC':'I', 'ATT':'I', 'ATG':'M',
+        'ACA':'T', 'ACC':'T', 'ACG':'T', 'ACT':'T',
+        'AAC':'N', 'AAT':'N', 'AAA':'K', 'AAG':'K',
+        'AGC':'S', 'AGT':'S', 'AGA':'R', 'AGG':'R',                
+        'CTA':'L', 'CTC':'L', 'CTG':'L', 'CTT':'L',
+        'CCA':'P', 'CCC':'P', 'CCG':'P', 'CCT':'P',
+        'CAC':'H', 'CAT':'H', 'CAA':'Q', 'CAG':'Q',
+        'CGA':'R', 'CGC':'R', 'CGG':'R', 'CGT':'R',
+        'GTA':'V', 'GTC':'V', 'GTG':'V', 'GTT':'V',
+        'GCA':'A', 'GCC':'A', 'GCG':'A', 'GCT':'A',
+        'GAC':'D', 'GAT':'D', 'GAA':'E', 'GAG':'E',
+        'GGA':'G', 'GGC':'G', 'GGG':'G', 'GGT':'G',
+        'TCA':'S', 'TCC':'S', 'TCG':'S', 'TCT':'S',
+        'TTC':'F', 'TTT':'F', 'TTA':'L', 'TTG':'L',
+        'TAC':'Y', 'TAT':'Y', 'TAA':'*', 'TAG':'*',
+        'TGC':'C', 'TGT':'C', 'TGA':'*', 'TGG':'W',
+    }
+    AATable = {}
+    for k,v in codonTable .items():
+        if not v in AATable.keys() : AATable[v] = [k]
+        else : AATable[v].append(k)
+    return (codonTable, AATable)
+
+def translateSequence(seq):
+    aminoSeq = ""
+    seq = seq.replace("N", "A")
+    if len(seq)%3 == 0:
+        for i in range(0, len(seq), 3):
+            if seq[i: i+3] in codonTable.keys() : aminoSeq += codonTable[seq[i: i+3]]
+            else : 
+                prRed("Error : translation failed, unknown codon uncontered : "+ seq[i: i+3] + " Please check your sequence or add it in the codon table")
+                return -1 
+
+
+    else: 
+        # prRed("unable to proced translation, length of sequence isn't a multiple of 3")
+        while len(seq) %3 != 0: seq+="N"
+        return translateSequence(seq)
+
+    if aminoSeq  != "" : return aminoSeq
+    else : return -1 
+
+def translateFile(fastaFile, destinationPath = settings["genesFastaResultPath"]):
+    newFile = fastaFile.replace(".fasta", "_translated.fasta")
+    listRec=[]
+    for record in SeqIO.parse(fastaFile, "fasta"):
+        seq = str(record.seq).upper()
+        aaSeq = translateSequence(seq)
+        if aaSeq != -1:
+            record.seq = Seq(aaSeq)
+        else:
+            prRed("an error occured during translation...")
+        print(record)
+
+        listRec.append(record)
+
+        SeqIO.write(listRec, newFile, "fasta")
+        return newFile
 
 # function aligneSequenceWithMuscle
 # this function will creat a sequence alignement file (.phy) using the muscle software
@@ -1106,6 +1169,7 @@ def run():
 
     if settings["useMafft"]:
         for fasta in getFASTAFiles(path=settings ["genesFastaResultPath"]):
+            # translatedFile = translateFile(settings ["genesFastaResultPath"] + fasta)
             alignedFile = aligneSequenceWithMafft(settings ["genesFastaResultPath"] + fasta)
             checkMafftAlignement(alignedFile)
         tMafftAlignement = time.time() - tMafftAlignement
@@ -1146,4 +1210,5 @@ def run():
 setup()
 geneDict = getGeneDict()
 superpositionDict={}
+codonTable, AATable = getTranslationTable()
 init() # to have color in the terminal
