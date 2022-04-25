@@ -4,14 +4,14 @@
 
 
 This script is developped under python 3.
-Make sure that your default ython version is 3.x by the following command :
+Make sure that your default python version is 3.x by the following command :
 python --version
-If not, please install python3 or if you already have it, either se it up as the default version, or add "3" to the "pip" commande and "python" commande:
+If not, please install python 3 or if you already have it, either set it up as the default version, or add "3" to the "pip" command and "python" command:
 python3 main.py
 pip3 install pandas
 
 Installation
-To run this program you will need the following package :
+To run this program you will need the following packages :
 
 -- pandas
 -- biopython
@@ -35,7 +35,7 @@ To install them via pip
  conda install colorama 
  
  
- This program also use  muscle 5.1 	ns mafft 7.5. They are included in the tools folder, but feel free to réinstall them if you enconter any issue.
+ This program also use muscle 5.1 and mafft 7.5. They are included in the tools folder, but feel free to reinstall them if you enconter any issue.
  
 On macOS and linux , you might have to allow execution with the following command :
 chmod +x tools/mafft/mafft-mac/mafft.bat # change for the apropriate folder on linux
@@ -44,7 +44,7 @@ or
 chmod +x tools/muscle/muscle5.1.linux_intel64
 
 Please don't change the name of the executable file, they are used in the script to find the command line program.
-If you have those software already installed, feel free to change their location in the settings.py file
+If you have these software already installed, feel free to change their location in the settings.py file
 
 You can choose to use only mafft or only muscle or both by changing the useMuscle and useMafft variable in the settings.py file 
  ################################################################################
@@ -79,10 +79,10 @@ By default you need to put your list of paired file in the ressources/raw_data/ 
 But feel free to edit the setting.py file to change the default location of your file.
 
 
-if you are using single fasta file, (not paired with a csv anotation),
+if you are using a single .fasta file, (not paired with a .csv anotation),
 It should be a fasta containing reads for a gene.
 Each read inside it should have for sequence ID the name of the taxon.
-exemple :
+example :
 file name : 12S.fasta
 file content :
 >JM59
@@ -101,7 +101,7 @@ The csv file must be called "list_accessionID.csv" with atleest a column named "
 The csv file should be at the same place as the genbankDownloader.
 Simply execute the file by double clicking on it or by the command line
 python genbankDownloader.py
-It will automaticly download the file in the row_data folder.
+It will automatically download the file in the row_data folder.
 
 WARNING :  on macOS you might need to install a default ssl certificate with the command :
 cd /Applications/Python 3.6/
@@ -109,7 +109,7 @@ cd /Applications/Python 3.6/
 Change the python version for the one you are using.
 
 
-You can add or delete gene that will be recorded by ading them or deleting them in the setting.py file.
+You can add or delete genes that will be recorded by ading them or deleting them in the setting.py file.
 
 you will find something like :
 "geneToDetect":["12S", "COX1",
