@@ -703,71 +703,6 @@ def generateSuperpositionSummary(mitogenomeDict, csvPath= settings["csvResultPat
 
 ################################################################################
 # Sequence alignement
-
-
-
-
-def getTranslationTable():
-    codonTable = {
-        'ATA':'I', 'ATC':'I', 'ATT':'I', 'ATG':'M',
-        'ACA':'T', 'ACC':'T', 'ACG':'T', 'ACT':'T',
-        'AAC':'N', 'AAT':'N', 'AAA':'K', 'AAG':'K',
-        'AGC':'S', 'AGT':'S', 'AGA':'R', 'AGG':'R',                
-        'CTA':'L', 'CTC':'L', 'CTG':'L', 'CTT':'L',
-        'CCA':'P', 'CCC':'P', 'CCG':'P', 'CCT':'P',
-        'CAC':'H', 'CAT':'H', 'CAA':'Q', 'CAG':'Q',
-        'CGA':'R', 'CGC':'R', 'CGG':'R', 'CGT':'R',
-        'GTA':'V', 'GTC':'V', 'GTG':'V', 'GTT':'V',
-        'GCA':'A', 'GCC':'A', 'GCG':'A', 'GCT':'A',
-        'GAC':'D', 'GAT':'D', 'GAA':'E', 'GAG':'E',
-        'GGA':'G', 'GGC':'G', 'GGG':'G', 'GGT':'G',
-        'TCA':'S', 'TCC':'S', 'TCG':'S', 'TCT':'S',
-        'TTC':'F', 'TTT':'F', 'TTA':'L', 'TTG':'L',
-        'TAC':'Y', 'TAT':'Y', 'TAA':'*', 'TAG':'*',
-        'TGC':'C', 'TGT':'C', 'TGA':'*', 'TGG':'W',
-    }
-    AATable = {}
-    for k,v in codonTable .items():
-        if not v in AATable.keys() : AATable[v] = [k]
-        else : AATable[v].append(k)
-    return (codonTable, AATable)
-
-def translateSequence(seq):
-    aminoSeq = ""
-    seq = seq.replace("N", "A")
-    if len(seq)%3 == 0:
-        for i in range(0, len(seq), 3):
-            if seq[i: i+3] in codonTable.keys() : aminoSeq += codonTable[seq[i: i+3]]
-            else : 
-                prRed("Error : translation failed, unknown codon uncontered : "+ seq[i: i+3] + " Please check your sequence or add it in the codon table")
-                return -1 
-
-
-    else: 
-        # prRed("unable to proced translation, length of sequence isn't a multiple of 3")
-        while len(seq) %3 != 0: seq+="N"
-        return translateSequence(seq)
-
-    if aminoSeq  != "" : return aminoSeq
-    else : return -1 
-
-def translateFile(fastaFile, destinationPath = settings["genesFastaResultPath"]):
-    newFile = fastaFile.replace(".fasta", "_translated.fasta")
-    listRec=[]
-    for record in SeqIO.parse(fastaFile, "fasta"):
-        seq = str(record.seq).upper()
-        aaSeq = translateSequence(seq)
-        if aaSeq != -1:
-            record.seq = Seq(aaSeq)
-        else:
-            prRed("an error occured during translation...")
-        print(record)
-
-        listRec.append(record)
-
-        SeqIO.write(listRec, newFile, "fasta")
-        return newFile
-
 # function aligneSequenceWithMuscle
 # this function will creat a sequence alignement file (.phy) using the muscle software
 # @param
@@ -1169,7 +1104,6 @@ def run():
 
     if settings["useMafft"]:
         for fasta in getFASTAFiles(path=settings ["genesFastaResultPath"]):
-            # translatedFile = translateFile(settings ["genesFastaResultPath"] + fasta)
             alignedFile = aligneSequenceWithMafft(settings ["genesFastaResultPath"] + fasta)
             checkMafftAlignement(alignedFile)
         tMafftAlignement = time.time() - tMafftAlignement
@@ -1210,5 +1144,4 @@ def run():
 setup()
 geneDict = getGeneDict()
 superpositionDict={}
-codonTable, AATable = getTranslationTable()
 init() # to have color in the terminal
