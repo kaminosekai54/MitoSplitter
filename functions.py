@@ -451,7 +451,7 @@ def extractSeqFromSingleFasta(fasta, destinationPath = settings["classicFastaRes
     if name == "COI" : name = "COX1"
     if name == "COII" : name = "COX2"
     records = SeqIO.parse(fasta, "fasta")
-    if name in setting["geneToDetect"]:
+    if name in settings["geneToDetect"]:
         if not name in geneDict .keys() :  geneDict[name] = []
         listMitogenome = []
 
@@ -727,7 +727,7 @@ def aligneSequenceWithMuscle(fasta, outputLocation = settings["sequenceAlignemen
         muscleEXE=muscleLocation+"muscle5.1.macos_intel64"
         subprocess.Popen("chmod +x " + muscleEXE, stdout = subprocess.PIPE, stderr=subprocess.PIPE,          shell = (sys.platform!="win32")).wait()
 
-    muscle_cline= muscleEXE + " -align " + os.path.abspath(fasta) + " -output " + os.path.abspath(tmpFile)
+    muscle_cline= muscleEXE + " -align " + os.path.abspath(fasta) + " -output " + os.path.abspath(tmpFile) + " -maxiters 10"
     child= subprocess.Popen(str(muscle_cline), stdout = subprocess.PIPE, stderr=subprocess.PIPE,          shell = (sys.platform!="win32"))
     child.wait()
     correctGape(tmpFile)
@@ -1099,13 +1099,13 @@ def run():
     if settings["useMuscle"]:
         for fasta in getFASTAFiles(path=settings ["genesFastaResultPath"]):
             alignedFile = aligneSequenceWithMuscle(settings ["genesFastaResultPath"] + fasta)
-            checkMuscleAlignement(alignedFile)
+            # checkMuscleAlignement(alignedFile)
         tMuscleAlignement = time.time() - tMuscleAlignement
 
     if settings["useMafft"]:
         for fasta in getFASTAFiles(path=settings ["genesFastaResultPath"]):
             alignedFile = aligneSequenceWithMafft(settings ["genesFastaResultPath"] + fasta)
-            checkMafftAlignement(alignedFile)
+            # checkMafftAlignement(alignedFile)
         tMafftAlignement = time.time() - tMafftAlignement
 
 
