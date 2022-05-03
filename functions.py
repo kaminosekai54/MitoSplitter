@@ -749,6 +749,7 @@ def aligneSequenceWithMuscle(fasta, outputLocation = settings["sequenceAlignemen
         subprocess.Popen("chmod +x " + muscleEXE, stdout = subprocess.PIPE, stderr=subprocess.PIPE,          shell = (sys.platform!="win32")).wait()
 
     muscle_cline= muscleEXE + " -align " + os.path.abspath(fasta) + " -output " + os.path.abspath(tmpFile) + " -maxiters 10"
+    # print("commande : \n " + muscle_cline)
     child= subprocess.Popen(str(muscle_cline), stdout = subprocess.PIPE, stderr=subprocess.PIPE,          shell = (sys.platform!="win32"))
     child.wait()
     correctGape(tmpFile)
