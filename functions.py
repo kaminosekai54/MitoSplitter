@@ -369,6 +369,9 @@ def extractSeqFromCSV(csv, fasta, destinationPath = settings["classicFastaResult
     prevName =""
     nextName = ""
     listName = []
+    geneCounter= {}
+    for gene in settings["geneToDetect"]:
+        geneCounter[gene] = 0
 
     for i in df.index:
         name = df[settings["nameColName"]][i]
@@ -376,6 +379,8 @@ def extractSeqFromCSV(csv, fasta, destinationPath = settings["classicFastaResult
         max = correctMinMaxInputError(str(df[settings["maxColName"]][i]), settings["maxColName"], mitogenomeName, name)
 
         if name in settings["geneToDetect"]:
+
+            
 
             if i+1 < len(df.index) and i+1 in df.index :
                 nextName = df[settings["nameColName"]][i+1]
@@ -403,6 +408,13 @@ def extractSeqFromCSV(csv, fasta, destinationPath = settings["classicFastaResult
                     elif prevName == "CYTB" and (nextName == "ND1" or nextName == "NAD1") : name = name +"2"
                     elif prevName == "CYTB": name = name +"2"
                     elif (nextName == "ND1" or nextName == "NAD1") : name = name +"2"
+
+                if name in geneCounter.keys():
+                    geneCounter[name] +=1
+                    if geneCounter[name]  > 1 :
+                        if any(char.isdigit() for char in name):name = name + "-" + str(geneCounter[name]) 
+                        else:name = name + str(geneCounter[name])
+                    
                 Subseq.append(mitogenomeSeq[min : max])
                 record = SeqRecord(mitogenomeSeq[min : max], id=mitogenomeName, name=name, description=str(fileNumber))
                 records.append(record)
@@ -525,6 +537,9 @@ def extractSeqFromGBFile(gbFile, destinationPath = settings["classicFastaResultP
             accessionID = record.id
             needRename=True
             listName = []
+            geneCounter= {}
+            for gene in settings["geneToDetect"]:
+                geneCounter[gene] = 0
 
             if not accessionID in listAccession: listAccession.append(accessionID)
             name = ""
@@ -579,6 +594,12 @@ def extractSeqFromGBFile(gbFile, destinationPath = settings["classicFastaResultP
                         elif (nextName == "ND1" or nextName == "NAD1") : name = name +"2"
 
                     if name in settings["geneToDetect"]:
+                        if name in geneCounter.keys():
+                            geneCounter[name] +=1
+                            if geneCounter[name]  > 1 : 
+                                if any(char.isdigit() for char in name):name = name + "-" + str(geneCounter[name]) 
+                                else:name = name + str(geneCounter[name])
+
                         record = SeqRecord(seq, id=mitogenomeName, name=name, description= accessionID)
                         listRecords.append(record)
                         listGene.append(name)

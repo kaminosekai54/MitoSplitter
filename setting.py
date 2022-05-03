@@ -13,7 +13,7 @@ settings = {
 "maxColName" : "Maximum",
 "nameColName" : "Name",
 "typeColName" : "Type",
-"useMuscle" : True,
+"useMuscle" : False,
 "useMafft" : True,
 "geneToDetect":[
     "12S", "16S", "18S", "28S", 
