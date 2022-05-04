@@ -358,6 +358,14 @@ def extractSeqFromCSV(csv, fasta, destinationPath = settings["classicFastaResult
     df[settings["nameColName"]] = df[settings["nameColName"]].str.replace(r"COI", "COX1", regex=False)
     df[settings["nameColName"]] = df[settings["nameColName"]].str.replace(r"NADH", "ND", regex=False)
     df[settings["nameColName"]] = df[settings["nameColName"]].str.replace(r"NAD", "ND", regex=False)
+    colToRemove = []
+
+    for gene in df.Name:
+        if not gene in settings["geneToDetect"] : colToRemove.append(gene)
+
+    for gene in colToRemove:
+        df = df[df[settings["nameColName"]] != gene]
+
 
     mitogenomeName, mitogenomeSeq, mitogenomeId, fileNumber = getMitogenome(fasta)
     Subseq = []
@@ -417,6 +425,12 @@ def extractSeqFromCSV(csv, fasta, destinationPath = settings["classicFastaResult
                 print(log)
                 writeLog(log)
 
+    # print(len(df))
+    # print(len(Subseq))
+    # for seq in df.Name:
+        # if seq not in listName: print(seq)
+    # print(df)
+    # print(Subseq)
     df = df.assign(Subsequence = Subseq)
     df.to_csv(csvPath + csv[csv.rfind("/")+1:].replace(".csv","") + "_with_sequence.csv", index= False)
 
@@ -444,7 +458,11 @@ def extractSeqFromCSV(csv, fasta, destinationPath = settings["classicFastaResult
 # @fasta, the path to the fasta file to parth
 # @destinationPath, path to the destion where to write the new fasta or to find it if it exist
 def extractSeqFromSingleFasta(fasta, destinationPath = settings["classicFastaResultPath"], destinationPath2 = settings["genesFastaResultPath"]):
+    log = "Starting extraction from " + fasta
+    print(log)
+    writeLog(log)
     name = str.upper(fasta[fasta.rfind("/")+1:].replace(".fasta", "").replace(" ", "-"))
+    listMitogenome = []
     if "_" in name : name = name[:name.find("_")]
     if "NADH" in name : name = name.replace("NADH", "ND")
     if "NAD" in name : name = name.replace("NAD", "ND")
@@ -453,7 +471,7 @@ def extractSeqFromSingleFasta(fasta, destinationPath = settings["classicFastaRes
     records = SeqIO.parse(fasta, "fasta")
     if name in settings["geneToDetect"]:
         if not name in geneDict .keys() :  geneDict[name] = []
-        listMitogenome = []
+        
 
         if not os.path.isfile(destinationPath+ name + ".fasta"):
             SeqIO.write(records, destinationPath+ name + ".fasta", "fasta")
@@ -728,6 +746,7 @@ def aligneSequenceWithMuscle(fasta, outputLocation = settings["sequenceAlignemen
         subprocess.Popen("chmod +x " + muscleEXE, stdout = subprocess.PIPE, stderr=subprocess.PIPE,          shell = (sys.platform!="win32")).wait()
 
     muscle_cline= muscleEXE + " -align " + os.path.abspath(fasta) + " -output " + os.path.abspath(tmpFile) + " -maxiters 10"
+    if settings["debugLog"] : print("Commande : \n" + muscle_cline)
     child= subprocess.Popen(str(muscle_cline), stdout = subprocess.PIPE, stderr=subprocess.PIPE,          shell = (sys.platform!="win32"))
     child.wait()
     correctGape(tmpFile)
@@ -762,7 +781,7 @@ def aligneSequenceWithMafft(fasta, outputLocation = settings["sequenceAlignement
         subprocess.Popen("chmod +x " + mafftEXE, stdout = subprocess.PIPE, stderr=subprocess.PIPE,          shell = (sys.platform!="win32")).wait()
         mafft_cline= os.path.abspath(mafftEXE) + " --auto --out "+ os.path.abspath(tmpFile) + " " + os.path.abspath(fasta)
 
-    # print("Commande : \n" + mafft_cline)
+    if settings["debugLog"] : print("Commande : \n" + mafft_cline)
     child= subprocess.Popen(str(mafft_cline), stdout = subprocess.PIPE, stderr=subprocess.PIPE,          shell = (sys.platform!="win32"))
     child.wait()
     correctGape(tmpFile)
@@ -1099,13 +1118,13 @@ def run():
     if settings["useMuscle"]:
         for fasta in getFASTAFiles(path=settings ["genesFastaResultPath"]):
             alignedFile = aligneSequenceWithMuscle(settings ["genesFastaResultPath"] + fasta)
-            # checkMuscleAlignement(alignedFile)
+            if settings["checkAlignement"] : checkMuscleAlignement(alignedFile)
         tMuscleAlignement = time.time() - tMuscleAlignement
 
     if settings["useMafft"]:
         for fasta in getFASTAFiles(path=settings ["genesFastaResultPath"]):
             alignedFile = aligneSequenceWithMafft(settings ["genesFastaResultPath"] + fasta)
-            # checkMafftAlignement(alignedFile)
+            if settings["checkAlignement"] : checkMafftAlignement(alignedFile)
         tMafftAlignement = time.time() - tMafftAlignement
 
 
