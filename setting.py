@@ -13,10 +13,10 @@ settings = {
 "maxColName" : "Maximum",
 "nameColName" : "Name",
 "typeColName" : "Type",
-"useMuscle" : False,
-"useMafft" : True,
+"useMuscle" : True,
+"useMafft" : False,
 "checkAlignement" : False,
-"debugLog" : False,
+"debugLog" : True,
 "geneToDetect":[
     "12S", "16S", "18S", "28S", 
     "ATP6", "ATP8", "COX1", "COX2", "COX3", "CYTB", "H3",

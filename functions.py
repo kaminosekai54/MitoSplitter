@@ -4,6 +4,7 @@ import sys, os, platform, subprocess, re,time
 from datetime import datetime
 from colorama import Fore, Back, Style, init
 import pandas as pd
+import csv
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
@@ -73,7 +74,8 @@ def writeLog(logToWrite, output_path = settings["logPath"], firstTime = False):
     if not os.path.isfile(output_path + "log.txt"):
         f = open(output_path + "log.txt", "w")
     else:
-        f = open(output_path + "log.txt", "a")
+        if firstTime: f = open(output_path + "log.txt", "w")
+        else: f = open(output_path + "log.txt", "a")
     now = datetime.now().strftime('%d-%m-%Y:%H:%M:%S')
     if firstTime:
         f.write(str(now ) + "\n" + logToWrite + "\n")
@@ -100,6 +102,15 @@ def getCSVFiles(path = settings["rawFilePath"], extension = ".csv"):
 def getFASTAFiles(path = settings["rawFilePath"], extension = ".fasta"):
     fileList = os.listdir(path)
     return [ fastaFile for fastaFile in fileList if fastaFile.endswith( extension) ]
+# getCSVDelimiter,
+#  This function return the delimiter of a csv File
+# @param
+# @csvFile, the csv file
+def getCSVDelimiter(csvFile):
+    with open(csvFile, 'r') as csvfile:
+        dialect = csv.Sniffer().sniff(csvfile.readline())
+        return str(dialect.delimiter)
+
 
 # getGBFiles
 # this function return a list of all the .gb files
@@ -347,7 +358,8 @@ def extractSeqFromCSV(csv, fasta, destinationPath = settings["classicFastaResult
     log = "Starting extraction for " + csv
     print(log)
     writeLog(log)
-    df = pd.read_csv(csv, sep=",")
+    separator = getCSVDelimiter(csv)
+    df = pd.read_csv(csv, sep=separator)
     df = df[df[settings["typeColName"]] != "gene"]
     df = df[df[settings["typeColName"]] != "source"]
     df[settings["nameColName"]] = df[settings["nameColName"]].str.replace("\s(.*)", "",  regex=True)
@@ -358,6 +370,9 @@ def extractSeqFromCSV(csv, fasta, destinationPath = settings["classicFastaResult
     df[settings["nameColName"]] = df[settings["nameColName"]].str.replace(r"COI", "COX1", regex=False)
     df[settings["nameColName"]] = df[settings["nameColName"]].str.replace(r"NADH", "ND", regex=False)
     df[settings["nameColName"]] = df[settings["nameColName"]].str.replace(r"NAD", "ND", regex=False)
+    df[settings["nameColName"]] = df[settings["nameColName"]].str.replace(r"COB", "CYTB", regex=False)
+    df[settings["nameColName"]] = df[settings["nameColName"]].str.replace(r"L-RRNA", "16S", regex=False)
+    df[settings["nameColName"]] = df[settings["nameColName"]].str.replace(r"S-RRNA", "12S", regex=False)
     colToRemove = []
 
     for gene in df.Name:
@@ -468,6 +483,9 @@ def extractSeqFromSingleFasta(fasta, destinationPath = settings["classicFastaRes
     if "NAD" in name : name = name.replace("NAD", "ND")
     if name == "COI" : name = "COX1"
     if name == "COII" : name = "COX2"
+    if name == "COB" : name = "CYTB"
+    if name == "L-RRNA" : name = "16S"
+    if name == "S-RRNA" : name = "12S"
     records = SeqIO.parse(fasta, "fasta")
     if name in settings["geneToDetect"]:
         if not name in geneDict .keys() :  geneDict[name] = []
@@ -576,10 +594,14 @@ def extractSeqFromGBFile(gbFile, destinationPath = settings["classicFastaResultP
                     name = str.upper(name)
 
 
+                    #  name auto rename
                     if "NADH" in name : name = name.replace("NADH", "ND")
                     if "NAD" in name : name = name.replace("NAD", "ND")
                     if name == "COI" : name = "COX1"
                     if name == "COII" : name = "COX2"
+                    if name == "COB" : name = "CYTB"
+                    if name == "L-RRNA" : name = "16S"
+                    if name == "S-RRNA" : name = "12S"
                     if name == "TRNA-LEU":
                         if prevName == "COX1" and nextName == "COX2": name = name +"1"
                         elif prevName == "COX1" : name = name +"1"
@@ -745,7 +767,7 @@ def aligneSequenceWithMuscle(fasta, outputLocation = settings["sequenceAlignemen
         muscleEXE=muscleLocation+"muscle5.1.macos_intel64"
         subprocess.Popen("chmod +x " + muscleEXE, stdout = subprocess.PIPE, stderr=subprocess.PIPE,          shell = (sys.platform!="win32")).wait()
 
-    muscle_cline= muscleEXE + " -align " + os.path.abspath(fasta) + " -output " + os.path.abspath(tmpFile) + " -maxiters 10"
+    muscle_cline= muscleEXE + " -align " + os.path.abspath(fasta) + " -output " + os.path.abspath(tmpFile)
     if settings["debugLog"] : print("Commande : \n" + muscle_cline)
     child= subprocess.Popen(str(muscle_cline), stdout = subprocess.PIPE, stderr=subprocess.PIPE,          shell = (sys.platform!="win32"))
     child.wait()
@@ -772,10 +794,11 @@ def aligneSequenceWithMafft(fasta, outputLocation = settings["sequenceAlignement
 
     if osName == "Linux":
         mafftEXE= mafftLocation  + "muscle5.1.linux_intel64"
-        subprocess.Popen("chmod +x " + mafftEXE, stdout = subprocess.PIPE, stderr=subprocess.PIPE,          shell = (sys.platform!="win32")).wait()
+        # subprocess.Popen("chmod +x " + mafftEXE, stdout = subprocess.PIPE, stderr=subprocess.PIPE,          shell = (sys.platform!="win32")).wait()
+        mafft_cline= "/usr/bin/mafft --auto --out "+ os.path.abspath(tmpFile) + " " + os.path.abspath(fasta)
     elif osName == "Windows":
         mafftEXE= mafftLocation + "mafft-win/mafft.bat"
-        mafft_cline= "cmd.exe /C " + os.path.abspath(mafftEXE) + " --auto --out "+ os.path.abspath(tmpFile) + " " + os.path.abspath(fasta)
+        mafft_cline= os.path.abspath(mafftEXE) + " --auto --out "+ os.path.abspath(tmpFile) + " " + os.path.abspath(fasta)
     elif osName == "Darwin":
         mafftEXE= mafftLocation +"mafft-mac/mafft.bat"
         subprocess.Popen("chmod +x " + mafftEXE, stdout = subprocess.PIPE, stderr=subprocess.PIPE,          shell = (sys.platform!="win32")).wait()

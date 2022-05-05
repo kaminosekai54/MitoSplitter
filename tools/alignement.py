@@ -23,13 +23,13 @@ def main():
     if settings["useMuscle"]:
         for fasta in getFASTAFiles(path="." + settings ["genesFastaResultPath"]):
             alignedFile = aligneSequenceWithMuscle("."+ settings ["genesFastaResultPath"] + fasta, outputLocation ="." + settings["sequenceAlignementResultPath"], muscleLocation = "." + settings["musclePath"])
-            checkMuscleAlignement(alignedFile, alignementPath="."+ settings ["sequenceAlignementResultPath"], pathToFasta ="."+settings["genesFastaResultPath"], muscleLocation = "." + settings["musclePath"])
+            if settings["checkAlignement"] : checkMuscleAlignement(alignedFile, alignementPath="."+ settings ["sequenceAlignementResultPath"], pathToFasta ="."+settings["genesFastaResultPath"], muscleLocation = "." + settings["musclePath"])
         tMuscleAlignement = time.time() - tMuscleAlignement
 
     if settings["useMafft"]:
         for fasta in getFASTAFiles(path="."+settings ["genesFastaResultPath"]):
             alignedFile = aligneSequenceWithMafft("."+ settings ["genesFastaResultPath"] + fasta, outputLocation ="." + settings["sequenceAlignementResultPath"], mafftLocation = "." + settings["mafftPath"])
-            checkMafftAlignement(alignedFile, alignementPath="."+ settings ["sequenceAlignementResultPath"], pathToFasta ="."+settings["genesFastaResultPath"], mafftLocation = "." + settings["mafftPath"])
+            if settings["checkAlignement"] : checkMafftAlignement(alignedFile, alignementPath="."+ settings ["sequenceAlignementResultPath"], pathToFasta ="."+settings["genesFastaResultPath"], mafftLocation = "." + settings["mafftPath"])
         tMafftAlignement = time.time() - tMafftAlignement
 
     if settings["useMuscle"]:

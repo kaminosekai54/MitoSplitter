@@ -1,8 +1,13 @@
 # importing of package
-import os, re
+import sys,os, re
 from Bio import Entrez
 import pandas as pd
+# to be able to imort parent functions
+path = os.path.abspath("../")
+if not path in sys.path:
+    sys.path.append(path)
 
+from functions import getCSVDelimiter
 
 
 ################################################################################
@@ -15,7 +20,8 @@ Entrez.email = "alexis.culpin@cri-paris.org"
 def getIDListFromCSV(file = "./list_accessionID.csv"):
     df = ""
     if os.path.isfile(file):
-        df=pd.read_csv(file, sep=",")
+        separator= getCSVDelimiter(file)
+        df=pd.read_csv(file, sep=separator)
     else:
         print("File not found : " + file + "\n Please make sure your file is named correctly, have the correct extension, and   is at the correct position")
         return -1
@@ -46,8 +52,16 @@ def main():
     print(idList)
     if idList != -1:
         downloadFiles(idList=idList)
+        if os.path.isdir("./raw_data") : os.removedirs("./raw_data")
+        if os.path.isdir("./results") :
+            for dir in os.listdir("./results"):
+                os.removedirs("./results/"+dir)
         print("Download finish")
     else:
+        if os.path.isdir("./raw_data") : os.removedirs("./raw_data")
+        if os.path.isdir("./results") :
+            for dir in os.listdir("./results"):
+                os.removedirs("./results/"+dir)
         return
 
 if __name__ == '__main__':
