@@ -596,7 +596,6 @@ def extractSeqFromGBFile(gbFile, destinationPath = settings["classicFastaResultP
                 elif gene.type == "rRNA":
                     name = gene.qualifiers["product"][0][:gene.qualifiers["product"][0].find(" ")]
 
-                # print(gene)
 
                 
                 if nextIndex < len(record.features):
@@ -644,7 +643,6 @@ def extractSeqFromGBFile(gbFile, destinationPath = settings["classicFastaResultP
                             if geneCounter[name]  > 1 : 
                                 if any(char.isdigit() for char in name):name = name + "-" + str(geneCounter[name]) 
                                 else:name = name + str(geneCounter[name])
-                        if name.endswith("S-2"): prYellow(gbFile + " : " + name)
                         record = SeqRecord(seq, id=mitogenomeName, name=name, description= accessionID)
                         listRecords.append(record)
                         listGene.append(name)
@@ -1135,9 +1133,9 @@ def run():
                 singleFasta.append(f)
     
     singleFasta= [x for x in fastaFiles if x not in singleFasta]
-    # for c, f in couple:
-        # mitogenomeName, accessionID = extractSeqFromCSV(settings["rawFilePath"] + c, settings["rawFilePath"] + f)
-        # if mitogenomeName not in mitogenomeDict.keys(): mitogenomeDict[mitogenomeName] = accessionID
+    for c, f in couple:
+        mitogenomeName, accessionID = extractSeqFromCSV(settings["rawFilePath"] + c, settings["rawFilePath"] + f)
+        if mitogenomeName not in mitogenomeDict.keys(): mitogenomeDict[mitogenomeName] = accessionID
     
     for file in gbFiles:
         mitogenomeName, accessionID = extractSeqFromGBFile(settings["rawFilePath"] +file)
