@@ -491,10 +491,16 @@ def extractSeqFromSingleFasta(fasta, destinationPath = settings["classicFastaRes
         if not name in geneDict .keys() :  geneDict[name] = []
         
 
-        if not os.path.isfile(destinationPath+ name + ".fasta"):
-            SeqIO.write(records, destinationPath+ name + ".fasta", "fasta")
+        # for classic fasta
+        if not os.path.isfile(destinationPath + name + ".fasta"):
+            SeqIO.write(records, destinationPath2 + name + ".fasta", "fasta")
+
+        # For gene-fasta
+        if not os.path.isfile(destinationPath2 + name + ".fasta"):
+            SeqIO.write(records, destinationPath2 + name + ".fasta", "fasta")
+            
         
-            for record in SeqIO.parse(destinationPath+ name + ".fasta", "fasta"):
+            for record in SeqIO.parse(destinationPath2 + name + ".fasta", "fasta"):
                 listMitogenome.append(record.id)
                 if not isGenomeInGeneDict(name, record.id) : geneDict[name].append((record.id, record.seq, len(record.seq), "-1"))
                 else:
@@ -513,7 +519,7 @@ def extractSeqFromSingleFasta(fasta, destinationPath = settings["classicFastaRes
                     writer.write_record(record)
 
                 else:
-                    log = "WARNIN : Unexpected error : the gene " + name + " seams to already exist for the mitogenome : " + record.id + "\n  It's will be ignored in the file : " + fasta + "\n please check what is going on"
+                    log = "WARNING : Unexpected error : the gene " + name + " seams to already exist for the mitogenome : " + record.id + "\n  It's will be ignored in the file : " + fasta + "\n please check what is going on"
                     prRed(log)
                     writeLog(log)
 
@@ -1109,17 +1115,17 @@ def run():
                 singleFasta.append(f)
     
     singleFasta= [x for x in fastaFiles if x not in singleFasta]
-    for c, f in couple:
-        mitogenomeName, accessionID = extractSeqFromCSV(settings["rawFilePath"] + c, settings["rawFilePath"] + f)
-        if mitogenomeName not in mitogenomeDict.keys(): mitogenomeDict[mitogenomeName] = accessionID
+    # for c, f in couple:
+        # mitogenomeName, accessionID = extractSeqFromCSV(settings["rawFilePath"] + c, settings["rawFilePath"] + f)
+        # if mitogenomeName not in mitogenomeDict.keys(): mitogenomeDict[mitogenomeName] = accessionID
     
-    for file in gbFiles:
-        mitogenomeName, accessionID = extractSeqFromGBFile(settings["rawFilePath"] +file)
-        if mitogenomeName not in mitogenomeDict.keys(): 
-            mitogenomeDict[mitogenomeName] = [accessionID]
-        else:
-            for acces in accessionID:
-                if not acces in mitogenomeDict[mitogenomeName]: mitogenomeDict[mitogenomeName].append(acces)
+    # for file in gbFiles:
+        # mitogenomeName, accessionID = extractSeqFromGBFile(settings["rawFilePath"] +file)
+        # if mitogenomeName not in mitogenomeDict.keys(): 
+            # mitogenomeDict[mitogenomeName] = [accessionID]
+        # else:
+            # for acces in accessionID:
+                # if not acces in mitogenomeDict[mitogenomeName]: mitogenomeDict[mitogenomeName].append(acces)
 
     for file in singleFasta:
         mitogenomes, accessionID = extractSeqFromSingleFasta(settings["rawFilePath"]+file)
