@@ -392,6 +392,9 @@ def extractSeqFromCSV(csv, fasta, destinationPath = settings["classicFastaResult
     prevName =""
     nextName = ""
     listName = []
+    geneCounter= {}
+    for gene in settings["geneToDetect"]:
+        geneCounter[gene] = 0
 
     for i in df.index:
         name = df[settings["nameColName"]][i]
@@ -426,6 +429,11 @@ def extractSeqFromCSV(csv, fasta, destinationPath = settings["classicFastaResult
                     elif prevName == "CYTB" and (nextName == "ND1" or nextName == "NAD1") : name = name +"2"
                     elif prevName == "CYTB": name = name +"2"
                     elif (nextName == "ND1" or nextName == "NAD1") : name = name +"2"
+                if name in geneCounter.keys():
+                    geneCounter[name] +=1
+                    if geneCounter[name]  > 1 :
+                        if any(char.isdigit() for char in name):name = name + "-" + str(geneCounter[name]) 
+                        else:name = name + str(geneCounter[name])
                 Subseq.append(mitogenomeSeq[min : max])
                 record = SeqRecord(mitogenomeSeq[min : max], id=mitogenomeName, name=name, description=str(fileNumber))
                 records.append(record)
@@ -567,6 +575,10 @@ def extractSeqFromGBFile(gbFile, destinationPath = settings["classicFastaResultP
             accessionID = record.id
             needRename=True
             listName = []
+            geneCounter= {}
+            for gene in settings["geneToDetect"]:
+                geneCounter[gene] = 0
+
 
             if not accessionID in listAccession: listAccession.append(accessionID)
             name = ""
@@ -584,6 +596,8 @@ def extractSeqFromGBFile(gbFile, destinationPath = settings["classicFastaResultP
                 elif gene.type == "rRNA":
                     name = gene.qualifiers["product"][0][:gene.qualifiers["product"][0].find(" ")]
 
+                # print(gene)
+
                 
                 if nextIndex < len(record.features):
                     if record.features[nextIndex].type == "tRNA":
@@ -592,7 +606,7 @@ def extractSeqFromGBFile(gbFile, destinationPath = settings["classicFastaResultP
                         nextName= str.upper(record.features[nextIndex].qualifiers["gene"][0])
                     elif record.features[nextIndex].type == "rRNA":
                         nextName= str.upper(record.features[nextIndex].qualifiers["product"][0][:record.features[nextIndex].qualifiers["product"][0].find(" ")])
-                if gene.type != "gene" and gene.type != "source" and gene.type != "misc_feature":
+                if gene.type != "gene" and gene.type != "source" and gene.type != "misc_feature" and gene.type != "misc_RNA" and gene.type != "gap":
                     start = correctMinMaxInputError(str(gene.location.start),"Minimum",mitogenomeName,name)
                     end= correctMinMaxInputError(str(gene.location.end), "Maximum",mitogenomeName,name)
                     strand = gene.location.strand
@@ -625,6 +639,12 @@ def extractSeqFromGBFile(gbFile, destinationPath = settings["classicFastaResultP
                         elif (nextName == "ND1" or nextName == "NAD1") : name = name +"2"
 
                     if name in settings["geneToDetect"]:
+                        if name in geneCounter.keys():
+                            geneCounter[name] +=1
+                            if geneCounter[name]  > 1 : 
+                                if any(char.isdigit() for char in name):name = name + "-" + str(geneCounter[name]) 
+                                else:name = name + str(geneCounter[name])
+                        if name.endswith("S-2"): prYellow(gbFile + " : " + name)
                         record = SeqRecord(seq, id=mitogenomeName, name=name, description= accessionID)
                         listRecords.append(record)
                         listGene.append(name)
@@ -1119,13 +1139,13 @@ def run():
         # mitogenomeName, accessionID = extractSeqFromCSV(settings["rawFilePath"] + c, settings["rawFilePath"] + f)
         # if mitogenomeName not in mitogenomeDict.keys(): mitogenomeDict[mitogenomeName] = accessionID
     
-    # for file in gbFiles:
-        # mitogenomeName, accessionID = extractSeqFromGBFile(settings["rawFilePath"] +file)
-        # if mitogenomeName not in mitogenomeDict.keys(): 
-            # mitogenomeDict[mitogenomeName] = [accessionID]
-        # else:
-            # for acces in accessionID:
-                # if not acces in mitogenomeDict[mitogenomeName]: mitogenomeDict[mitogenomeName].append(acces)
+    for file in gbFiles:
+        mitogenomeName, accessionID = extractSeqFromGBFile(settings["rawFilePath"] +file)
+        if mitogenomeName not in mitogenomeDict.keys(): 
+            mitogenomeDict[mitogenomeName] = [accessionID]
+        else:
+            for acces in accessionID:
+                if not acces in mitogenomeDict[mitogenomeName]: mitogenomeDict[mitogenomeName].append(acces)
 
     for file in singleFasta:
         mitogenomes, accessionID = extractSeqFromSingleFasta(settings["rawFilePath"]+file)
