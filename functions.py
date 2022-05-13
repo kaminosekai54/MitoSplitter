@@ -1030,8 +1030,8 @@ def checkMafftAlignement(alignementFile, alignementPath= settings ["sequenceAlig
 
     for i in range(len(dm.matrix)):
         taxonName= dm.names[i]
-        print(taxonName)
-        print(dm.matrix[i][0])
+        # print(taxonName)
+        # print(dm.matrix[i][0])
         prevPDist = dm.matrix[i][0]
         if dm.matrix[i][0] > 0.5:
             listRec = getReversedRecordList(fastaFile, taxonName)
@@ -1041,8 +1041,8 @@ def checkMafftAlignement(alignementFile, alignementPath= settings ["sequenceAlig
             for j in range(len(dm2.matrix)):
                 if dm2.names[j] == taxonName:
                     if dm2.matrix[j][0] < prevPDist:
-                        print(dm2.matrix[j][0])
-                        print(prevPDist)
+                        # print(dm2.matrix[j][0])
+                        # print(prevPDist)
                         os.remove(fastaFile)
                         os.remove(alignementFile)
                         os.rename(tmpFasta, fastaFile)
@@ -1101,7 +1101,6 @@ def checkMuscleAlignement(alignementFile, alignementPath= settings ["sequenceAli
 
 
 ################################################################################
-# tree section
 
 # function generateDistanceTree
 # this function will creat distance tree 
@@ -1110,6 +1109,7 @@ def checkMuscleAlignement(alignementFile, alignementPath= settings ["sequenceAli
 # @alignementType, the type of alignement, "mafft" or "muscle"
 # @alignementLocation , where the alignement file are located, by default the value is the one set in the settings.py file
 # @outputLocation, where to output the tree files, by default the value is the one set in the settings.py file
+# tree section
 def generateDistanceTree(alignementType, alignementLocation = settings["sequenceAlignementResultPath"], outputLocation = settings["treeResultPath"]):
     fileList = [ file for file in os.listdir(alignementLocation) if alignementType in file and file.endswith(".phy")]
 
@@ -1151,9 +1151,6 @@ def run():
     couple.sort()
     singleFasta.sort()
     gbFiles.sort()
-    # print(couple)
-    # print(gbFiles)
-    # print(singleFasta)
     for c, f in couple:
         mitogenomeName, accessionID = extractSeqFromCSV(settings["rawFilePath"] + c, settings["rawFilePath"] + f)
         if mitogenomeName not in mitogenomeDict.keys(): mitogenomeDict[mitogenomeName] = accessionID
@@ -1179,7 +1176,6 @@ def run():
     generateAccessionIDSummary(mitogenomeDict)
     generateSuperpositionSummary(mitogenomeDict)
     tSummaryGeneration= time.time() - tSummaryGeneration
-    return
 
     tMuscleAlignement = time.time()
     tMafftAlignement = time.time()
@@ -1233,14 +1229,28 @@ setup()
 geneDict = getGeneDict()
 superpositionDict={}
 init() # to have color in the terminal
+
+
+
+
+
+################################################################################
+# debug function
+# put what ever you want inside to debug
 def debug():
     print(len(list(SeqIO.parse(settings ["genesFastaResultPath"] + "28S.fasta", "fasta"))))
+    for record in SeqIO.parse(settings ["genesFastaResultPath"] + "28S.fasta", "fasta"):
+        if record.id == "JM110": print(len(record.seq))
 
-    alignedFile = aligneSequenceWithMafft(settings ["genesFastaResultPath"] + "28S.fasta")
+    # alignedFile = aligneSequenceWithMafft(settings ["genesFastaResultPath"] + "28S.fasta")
     # if settings["checkAlignement"] : checkMafftAlignement(alignedFile)
-    listRec = getReversedRecordList(settings["genesFastaResultPath"]+"28S.fasta", "JM110")
-    writeSingleRecordList(settings["genesFastaResultPath"]+"28S_tmp.fasta", listRec)
-    tmpAlignement = aligneSequenceWithMafft(settings["genesFastaResultPath"]+"28S_tmp.fasta")
+    # correctGape(settings["sequenceAlignementResultPath"]+"28S_mafft_align.fasta")
+    # AlignIO.convert(settings["sequenceAlignementResultPath"]+"28S_mafft_align.fasta", "fasta", settings["sequenceAlignementResultPath"]+"28S_mafft_align.phy", "phylip-relaxed")
+    # correctGape(settings["sequenceAlignementResultPath"]+"28S_tmp_mafft_align.fasta")
+    # AlignIO.convert(settings["sequenceAlignementResultPath"]+"28S_tmp_mafft_align.fasta", "fasta", settings["sequenceAlignementResultPath"]+"28S_tmp_mafft_align.phy", "phylip-relaxed")
+    # listRec = getReversedRecordList(settings["genesFastaResultPath"]+"28S.fasta", "JM110")
+    # writeSingleRecordList(settings["genesFastaResultPath"]+"28S_tmp.fasta", listRec)
+    # tmpAlignement = aligneSequenceWithMafft(settings["genesFastaResultPath"]+"28S_tmp.fasta")
     dm = getPDistMatrix(settings["sequenceAlignementResultPath"]+"28S_mafft_align.phy")
     dm2 = getPDistMatrix(settings["sequenceAlignementResultPath"]+"28S_tmp_mafft_align.phy")
     for i in range(len(dm.matrix)):
