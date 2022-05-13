@@ -1,4 +1,5 @@
 # Import
+from configparser import SectionProxy
 from setting import *
 import sys, os, platform, subprocess, re,time
 from datetime import datetime
@@ -291,11 +292,14 @@ def writeRecords(listRecords, mtName, destinationPath = settings["classicFastaRe
                     elif "csv_" in id:
                         x = int(id[id.rfind("_")+1:])
                         y = int(record.description[record.description.rfind("_")+1:])
+                        # print(x)
+                        # print(y)
                         if y == x+1:
                             newSeq = seq + record.seq
                             modifySeqInFasta(fileName,mt, newSeq)
-                            geneDict[record.name][i] = (record.id, newSeq, len(newSeq), id)
-                            geneDict[record.name].append((record.id, newSeq, len(newSeq), record.description))
+                            geneDict[record.name][i] = (record.id, newSeq, len(newSeq), id[0: id.rfind("_")+1]+str(y))
+                            # geneDict[record.name].append((record.id, newSeq, len(newSeq), record.description))
+                            # print(geneDict[record.name])
 
 
 
@@ -501,10 +505,11 @@ def extractSeqFromSingleFasta(fasta, destinationPath = settings["classicFastaRes
 
         # for classic fasta
         if not os.path.isfile(destinationPath + name + ".fasta"):
-            SeqIO.write(records, destinationPath2 + name + ".fasta", "fasta")
+            SeqIO.write(records, destinationPath + name + ".fasta", "fasta")
 
         # For gene-fasta
         if not os.path.isfile(destinationPath2 + name + ".fasta"):
+            # print("file don't exist")
             SeqIO.write(records, destinationPath2 + name + ".fasta", "fasta")
             
         
@@ -518,13 +523,19 @@ def extractSeqFromSingleFasta(fasta, destinationPath = settings["classicFastaRes
 
         # if the file already exist
         else:
-            file = open(destinationPath + name + ".fasta", "a")
-            for record  in records:
+            # print("file already exist")
+            file = open(destinationPath2+ name + ".fasta", "a")
+            # print("file ouvert")
+            # print(list(records))
+            for record  in SeqIO.parse(fasta, "fasta"):
+                # print("ok")
                 listMitogenome.append(record.id)
                 if not isGenomeInGeneDict(name, record.id) : 
+                    # print("c'est ok")
                     geneDict[name].append((record.id, record.seq, len(record.seq), "-1"))
                     writer = SeqIO.FastaIO.FastaWriter(file)
                     writer.write_record(record)
+                    # print("should write the seq" + record.id)
 
                 else:
                     log = "WARNING : Unexpected error : the gene " + name + " seams to already exist for the mitogenome : " + record.id + "\n  It's will be ignored in the file : " + fasta + "\n please check what is going on"
@@ -1019,6 +1030,8 @@ def checkMafftAlignement(alignementFile, alignementPath= settings ["sequenceAlig
 
     for i in range(len(dm.matrix)):
         taxonName= dm.names[i]
+        print(taxonName)
+        print(dm.matrix[i][0])
         prevPDist = dm.matrix[i][0]
         if dm.matrix[i][0] > 0.5:
             listRec = getReversedRecordList(fastaFile, taxonName)
@@ -1028,6 +1041,8 @@ def checkMafftAlignement(alignementFile, alignementPath= settings ["sequenceAlig
             for j in range(len(dm2.matrix)):
                 if dm2.names[j] == taxonName:
                     if dm2.matrix[j][0] < prevPDist:
+                        print(dm2.matrix[j][0])
+                        print(prevPDist)
                         os.remove(fastaFile)
                         os.remove(alignementFile)
                         os.rename(tmpFasta, fastaFile)
@@ -1133,6 +1148,12 @@ def run():
                 singleFasta.append(f)
     
     singleFasta= [x for x in fastaFiles if x not in singleFasta]
+    couple.sort()
+    singleFasta.sort()
+    gbFiles.sort()
+    # print(couple)
+    # print(gbFiles)
+    # print(singleFasta)
     for c, f in couple:
         mitogenomeName, accessionID = extractSeqFromCSV(settings["rawFilePath"] + c, settings["rawFilePath"] + f)
         if mitogenomeName not in mitogenomeDict.keys(): mitogenomeDict[mitogenomeName] = accessionID
@@ -1158,6 +1179,7 @@ def run():
     generateAccessionIDSummary(mitogenomeDict)
     generateSuperpositionSummary(mitogenomeDict)
     tSummaryGeneration= time.time() - tSummaryGeneration
+    return
 
     tMuscleAlignement = time.time()
     tMafftAlignement = time.time()
@@ -1211,3 +1233,21 @@ setup()
 geneDict = getGeneDict()
 superpositionDict={}
 init() # to have color in the terminal
+def debug():
+    print(len(list(SeqIO.parse(settings ["genesFastaResultPath"] + "28S.fasta", "fasta"))))
+
+    alignedFile = aligneSequenceWithMafft(settings ["genesFastaResultPath"] + "28S.fasta")
+    # if settings["checkAlignement"] : checkMafftAlignement(alignedFile)
+    listRec = getReversedRecordList(settings["genesFastaResultPath"]+"28S.fasta", "JM110")
+    writeSingleRecordList(settings["genesFastaResultPath"]+"28S_tmp.fasta", listRec)
+    tmpAlignement = aligneSequenceWithMafft(settings["genesFastaResultPath"]+"28S_tmp.fasta")
+    dm = getPDistMatrix(settings["sequenceAlignementResultPath"]+"28S_mafft_align.phy")
+    dm2 = getPDistMatrix(settings["sequenceAlignementResultPath"]+"28S_tmp_mafft_align.phy")
+    for i in range(len(dm.matrix)):
+        if dm.names[i] == "JM110":
+            print(dm.matrix[i][0])
+
+    for i in range(len(dm2.matrix)):
+        if dm2.names[i] == "JM110": print(dm2.matrix[i][0])
+
+# debug()
