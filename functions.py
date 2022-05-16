@@ -407,7 +407,7 @@ def extractSeqFromCSV(csv, fasta, destinationPath = settings["classicFastaResult
 
         if name in settings["geneToDetect"]:
 
-            if i+1 < len(df.index) and i+1 in df.index :
+            if i+1 in df.index :
                 nextName = df[settings["nameColName"]][i+1]
 
             if min >= 0 and max <= len(mitogenomeSeq):
