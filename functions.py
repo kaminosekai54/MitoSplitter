@@ -1134,6 +1134,10 @@ def generateDistanceTree(alignementType, alignementLocation = settings["sequence
 def run():
     setup()
     writeLog("Starting treatement", firstTime=True)
+    for dir in os.listdir("./results"):
+        for file in os.listdir("results/"+dir):
+            os.remove("results/"+dir+"/"+file)
+    return
     mitogenomeDict = {}
     tExtraction = time.time()
     fastaFiles = getFASTAFiles()
