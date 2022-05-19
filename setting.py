@@ -14,8 +14,13 @@ settings = {
 "nameColName" : "Name",
 "typeColName" : "Type",
 "useMuscle" : True,
-"useMafft" : False,
-"checkAlignement" : False,
+"useMuscleV3" : True,
+"muscleParameterValue":{
+"-maxiters ":10,
+"-maxmb ":400,
+},
+"useMafft" : True,
+"checkAlignement" : True,
 "debugLog" : True,
 "geneToDetect":[
     "12S", "16S", "18S", "28S", 
@@ -27,6 +32,24 @@ settings = {
     "TRNA-MET", "TRNA-PHE", "TRNA-PRO", "TRNA-SER1", "TRNA-SER2", "TRNA-SER", 
     "TRNA-THR", "TRNA-TRP", "TRNA-TYR", "TRNA-VAL", 
     ],
+    "pDistThreshold" :  {
+        "default" : 0.5,
+    },
+    "geneAlias":{
+"COX1":["COI"],
+"COX2":["COII"],
+"COX3":["COIII"],
+"ND1":["NH1", "NAD1", "NADH1"],
+"ND2":["NH2", "NAD2", "NADH2"],
+"ND3":["NH3", "NAD3", "NADH3"],
+"ND4":["NH4", "NAD4", "NADH4"],
+"ND4L":["NH4L", "NAD4L", "NADH4L"],
+"ND5":["NH5", "NAD5", "NADH5"],
+"ND6":["NH6", "NAD6", "NADH6"],
+"CYTB":["COB"],
+"16S":["L-RRNA"],
+"12S":["S-RRNA"],
+    },
 }
 
 def getSettings():

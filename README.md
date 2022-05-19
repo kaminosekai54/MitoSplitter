@@ -17,6 +17,7 @@ To run this program you will need the following packages :
 -- biopython
 -- re
 -- colorama 
+-- numpy 
 
 First make sure you have pip installed, or install it  by following the instruction here :
 https://pip.pypa.io/en/stable/installation/
@@ -26,6 +27,7 @@ To install them via pip
  pip install biopython
  pip install re
  pip install colorama 
+ pip install numpy 
  
  
  If you are using conda  :
@@ -33,9 +35,23 @@ To install them via pip
  conda install biopython
  conda install re
  conda install colorama 
+ conda install numpy 
  
  
- This program also use muscle 5.1 and mafft 7.5. They are included in the tools folder, but feel free to reinstall them if you enconter any issue.
+ This program also use muscle 5.1 or 3.8 (you can choose by seting the variable in the setting.py) and mafft 7.5. They are included in the tools folder, but feel free to reinstall them if you enconter any issue.
+ links : make sure to choose the version made for your os, and put it in the tools folder in the apropriate subfolder.
+ muscle V3.8 : https://drive5.com/muscle/downloads_v3.htm
+ muscle V5.1 : https://github.com/rcedgar/muscle/releases/tag/v5.1
+ 
+ Warning : Specially on macOS make sure that your gcc version is V11 or greater 
+ gcc --version
+ or install it via :
+ brew install gcc
+ 
+ mafft : https://mafft.cbrc.jp/alignment/software/
+ 
+Warning : If you are using windows, make sure to choose the all in one version.
+
  
 On macOS and linux , you might have to allow execution with the following command :
 chmod +x tools/mafft/mafft-mac/mafft.bat # change for the apropriate folder on linux

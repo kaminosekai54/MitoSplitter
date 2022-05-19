@@ -1,9 +1,9 @@
 # Import
-from configparser import SectionProxy
 from setting import *
 import sys, os, platform, subprocess, re,time
 from datetime import datetime
 from colorama import Fore, Back, Style, init
+import numpy as np
 import pandas as pd
 import csv
 from Bio import SeqIO
@@ -265,8 +265,10 @@ def writeRecords(listRecords, mtName, destinationPath = settings["classicFastaRe
 #  writing all different gene in the corresponding fasta file
     for record in listRecords:
         fileName = destinationPath2  + record.name + ".fasta"
+        seqToModify={}
         if not record.name in geneDict.keys():
             geneDict[record.name] = []
+            
             
         if not isGenomeInGeneDict(record.name, record.id) :
 
@@ -296,7 +298,7 @@ def writeRecords(listRecords, mtName, destinationPath = settings["classicFastaRe
                         # print(y)
                         if y == x+1:
                             newSeq = seq + record.seq
-                            modifySeqInFasta(fileName,mt, newSeq)
+                            seqToModify[mt]= newSeq
                             geneDict[record.name][i] = (record.id, newSeq, len(newSeq), id[0: id.rfind("_")+1]+str(y))
                             # geneDict[record.name].append((record.id, newSeq, len(newSeq), record.description))
                             # print(geneDict[record.name])
@@ -304,6 +306,7 @@ def writeRecords(listRecords, mtName, destinationPath = settings["classicFastaRe
 
 
             file.close()
+            modifySeqInFasta(fileName, seqToModify)
 
 # function modifySeqInFasta
 # This function will modify a sequence for a given mitogenome in a given file and 
@@ -312,11 +315,11 @@ def writeRecords(listRecords, mtName, destinationPath = settings["classicFastaRe
 # @fileName, name of the file to read and write 
 # @mitogenomeName, name of the mitogenome, equal to the seqID, used to find the correct seq to modify
 # @newSeq, the new sequence to write
-def modifySeqInFasta(fileName, mitogenomeName, newSeq):
+def modifySeqInFasta(fileName, seqToModify):
     listRec = []
     for record in SeqIO.parse(fileName, "fasta"):
-        if record.id == mitogenomeName:
-            record.seq = newSeq
+        if record.id in seqToModify.keys():
+            record.seq = seqToModify[record.id]
 
         listRec.append(record)
 
@@ -370,13 +373,10 @@ def extractSeqFromCSV(csv, fasta, destinationPath = settings["classicFastaResult
     df[settings["nameColName"]] = df[settings["nameColName"]].str.replace(r")", "-", regex=False)
     df[settings["nameColName"]] = df[settings["nameColName"]].str.replace(r"(", "-", regex=False)
     df[settings["nameColName"]] = df[settings["nameColName"]].str.upper()
-    df[settings["nameColName"]] = df[settings["nameColName"]].str.replace(r"COII", "COX2",regex=False)
-    df[settings["nameColName"]] = df[settings["nameColName"]].str.replace(r"COI", "COX1", regex=False)
-    df[settings["nameColName"]] = df[settings["nameColName"]].str.replace(r"NADH", "ND", regex=False)
-    df[settings["nameColName"]] = df[settings["nameColName"]].str.replace(r"NAD", "ND", regex=False)
-    df[settings["nameColName"]] = df[settings["nameColName"]].str.replace(r"COB", "CYTB", regex=False)
-    df[settings["nameColName"]] = df[settings["nameColName"]].str.replace(r"L-RRNA", "16S", regex=False)
-    df[settings["nameColName"]] = df[settings["nameColName"]].str.replace(r"S-RRNA", "12S", regex=False)
+    for realName, aliasList in settings["geneAlias"].items():
+            for alias in aliasList: 
+                if alias in df[settings["nameColName"]] :     df[settings["nameColName"]] = df[settings["nameColName"]].str.replace(alias, realName)
+
     colToRemove = []
 
     for gene in df.Name:
@@ -491,26 +491,19 @@ def extractSeqFromSingleFasta(fasta, destinationPath = settings["classicFastaRes
     name = str.upper(fasta[fasta.rfind("/")+1:].replace(".fasta", "").replace(" ", "-"))
     listMitogenome = []
     if "_" in name : name = name[:name.find("_")]
-    if "NADH" in name : name = name.replace("NADH", "ND")
-    if "NAD" in name : name = name.replace("NAD", "ND")
-    if name == "COI" : name = "COX1"
-    if name == "COII" : name = "COX2"
-    if name == "COB" : name = "CYTB"
-    if name == "L-RRNA" : name = "16S"
-    if name == "S-RRNA" : name = "12S"
-    records = SeqIO.parse(fasta, "fasta")
+    name = getAlias(name)
     if name in settings["geneToDetect"]:
         if not name in geneDict .keys() :  geneDict[name] = []
         
 
         # for classic fasta
         if not os.path.isfile(destinationPath + name + ".fasta"):
-            SeqIO.write(records, destinationPath + name + ".fasta", "fasta")
+            SeqIO.write(SeqIO.parse(fasta, "fasta"), destinationPath + name + ".fasta", "fasta")
 
         # For gene-fasta
         if not os.path.isfile(destinationPath2 + name + ".fasta"):
             # print("file don't exist")
-            SeqIO.write(records, destinationPath2 + name + ".fasta", "fasta")
+            SeqIO.write(SeqIO.parse(fasta, "fasta"), destinationPath2 + name + ".fasta", "fasta")
             
         
             for record in SeqIO.parse(destinationPath2 + name + ".fasta", "fasta"):
@@ -625,13 +618,7 @@ def extractSeqFromGBFile(gbFile, destinationPath = settings["classicFastaResultP
 
 
                     #  name auto rename
-                    if "NADH" in name : name = name.replace("NADH", "ND")
-                    if "NAD" in name : name = name.replace("NAD", "ND")
-                    if name == "COI" : name = "COX1"
-                    if name == "COII" : name = "COX2"
-                    if name == "COB" : name = "CYTB"
-                    if name == "L-RRNA" : name = "16S"
-                    if name == "S-RRNA" : name = "12S"
+                    name = getAlias(name)
                     if name == "TRNA-LEU":
                         if prevName == "COX1" and nextName == "COX2": name = name +"1"
                         elif prevName == "COX1" : name = name +"1"
@@ -693,6 +680,17 @@ def extractSeqFromGBFile(gbFile, destinationPath = settings["classicFastaResultP
         os.rename(gbFile, newName)
 
     return (mitogenomeName, listAccession)
+
+
+# function getAlias,
+# This function return the correct name if an alias is encontered
+# @param,
+# @name, the alias to search
+def getAlias(name):
+    for realName, aliasList in settings["geneAlias"].items():
+        if name in aliasList: return str.upper(realName)
+
+    return str.upper(name)
 
 
 ################################################################################
@@ -778,6 +776,89 @@ def generateSuperpositionSummary(mitogenomeDict, csvPath= settings["csvResultPat
 
 ################################################################################
 # Sequence alignement
+
+
+# function getMyPDistMatrix,
+# this function return a dictionnary corresponding to 
+# the simplified pdistance matrix for thhe alignement
+# @param
+# @alignementFile, the, the alignement file
+# def getMyPDistMatrix(alignementFile):
+def getMyPDistMatrix(alignementFile):
+    matrix = {}
+    listRec = []
+    for record in AlignIO.read(alignementFile, "phylip-relaxed"):
+        matrix[record.id] = []
+
+        distList = []
+        listRec.append(str(record.seq))
+        for seq in listRec:
+            distList.append(getMyPDist(str(record.seq), seq)/len(seq))
+        matrix[record.id] = distList
+
+    return matrix
+
+# function getMyPdist,
+# this function compute the number of difference between two strings
+#  ignoring the difference when a ? is encontered
+def getMyPDist(s1, s2):
+    nbDif = 0
+    for i in range(len(s1)):
+        if s1[i] != s2[i] and s1[i] != "?" and s2[i] != "?": nbDif +=1 
+
+    return nbDif
+
+
+# function aligneSequenceWithMuscleV3
+# this function will creat a sequence alignement file (.phy) using the muscleV3 software
+# @param
+# @fasta, path to the fasta file on witch to process the alignement
+# @outputLocation path where to write the alignement file
+# @muscleLocation, path to the muscle executable file
+def aligneSequenceWithMuscleV3(fasta, outputLocation = settings["sequenceAlignementResultPath"], muscleLocation = settings["musclePath"]):
+    osName = platform.system()
+    outputFile =""
+    log = "Processing MuscleV3 alignement for " + fasta
+    print(log)
+    outputFile = outputLocation + fasta[fasta.rfind("/")+1:-6]+ "_muscle_align.phy"
+    tmpFile= outputLocation + fasta[fasta.rfind("/")+1:-6]+ "_muscle_align.fasta"
+
+    muscleEXE = ""
+    if osName == "Linux":
+        muscleEXE= muscleLocation  + "muscle3.8.31_i86linux64"
+        subprocess.Popen("chmod +x " + muscleEXE, stdout = subprocess.PIPE, stderr=subprocess.PIPE,          shell = (sys.platform!="win32")).wait()
+    elif osName == "Windows":
+        muscleEXE= muscleLocation+ "muscle3.8.31_i86win32.exe"
+    elif osName == "Darwin":
+        muscleEXE=muscleLocation+"muscle3.8.31_i86darwin64"
+        subprocess.Popen("chmod +x " + muscleEXE, stdout = subprocess.PIPE, stderr=subprocess.PIPE,          shell = (sys.platform!="win32")).wait()
+
+    muscle_cline= muscleEXE + " -in " + os.path.abspath(fasta) + " -out " + os.path.abspath(tmpFile)
+    if len(settings["muscleParameterValue"].keys()) >0:
+        for k,v in settings["muscleParameterValue"].items():
+            muscle_cline += " " + str(k) + " " + str(v)
+
+    if settings["debugLog"] : print("Commande : \n" + muscle_cline)
+    child= subprocess.Popen(str(muscle_cline), stdout = subprocess.PIPE, stderr=subprocess.PIPE,          shell = (sys.platform!="win32"))
+    child.wait()
+    rc= child.returncode
+    stdout = child.stdout
+    stderr = child.stderr
+    if rc == 0:
+        correctGape(tmpFile)
+        AlignIO.convert(tmpFile, "fasta", outputFile, "phylip-relaxed")
+        os.remove(tmpFile)
+        return outputFile
+    else:
+        prRed("Error while trying to align")
+        log = "The executed command was : \n" + str(muscle_cline) + "\n and the error code return was : " + str(rc) + "\n"
+        log += "Please check the log file for more infos, or try to execute the above command directly \n"
+        prRed(log)
+        log += "Output for error : \n" + str(stderr.read())
+        writeLog(log)
+        return outputFile
+
+
 # function aligneSequenceWithMuscle
 # this function will creat a sequence alignement file (.phy) using the muscle software
 # @param
@@ -785,6 +866,7 @@ def generateSuperpositionSummary(mitogenomeDict, csvPath= settings["csvResultPat
 # @outputLocation path where to write the alignement file
 # @muscleLocation, path to the muscle executable file
 def aligneSequenceWithMuscle(fasta, outputLocation = settings["sequenceAlignementResultPath"], muscleLocation = settings["musclePath"]):
+    if settings["useMuscleV3"] : return aligneSequenceWithMuscleV3(fasta, outputLocation =outputLocation, muscleLocation =muscleLocation  )
     osName = platform.system()
     outputFile =""
     log = "Processing Muscle alignement for " + fasta
@@ -806,10 +888,23 @@ def aligneSequenceWithMuscle(fasta, outputLocation = settings["sequenceAlignemen
     if settings["debugLog"] : print("Commande : \n" + muscle_cline)
     child= subprocess.Popen(str(muscle_cline), stdout = subprocess.PIPE, stderr=subprocess.PIPE,          shell = (sys.platform!="win32"))
     child.wait()
-    correctGape(tmpFile)
-    AlignIO.convert(tmpFile, "fasta", outputFile, "phylip-relaxed")
-    os.remove(tmpFile)
-    return outputFile
+    rc= child.returncode
+    stdout = child.stdout
+    stderr = child.stderr
+    if rc == 0:
+        correctGape(tmpFile)
+        AlignIO.convert(tmpFile, "fasta", outputFile, "phylip-relaxed")
+        os.remove(tmpFile)
+        return outputFile
+    else:
+        prRed("Error while trying to align")
+        log = "The executed command was : \n" + str(muscle_cline) + "\n and the error code return was : " + str(rc) + "\n"
+        log += "Please check the log file for more infos, or try to execute the above command directly \n"
+        prRed(log)
+        log += "Output for error : \n" + str(stderr.read())
+        writeLog(log)
+        return outputFile
+
 
 
 # function aligneSequenceWithMafft
@@ -842,10 +937,22 @@ def aligneSequenceWithMafft(fasta, outputLocation = settings["sequenceAlignement
     if settings["debugLog"] : print("Commande : \n" + mafft_cline)
     child= subprocess.Popen(str(mafft_cline), stdout = subprocess.PIPE, stderr=subprocess.PIPE,          shell = (sys.platform!="win32"))
     child.wait()
-    correctGape(tmpFile)
-    AlignIO.convert(tmpFile, "fasta", outputFile, "phylip-relaxed")
-    os.remove(tmpFile)
-    return outputFile
+    rc= child.returncode
+    stdout = child.stdout
+    stderr = child.stderr
+    if rc == 0 and not "fatal:" in str(stderr.readline()):
+        correctGape(tmpFile)
+        AlignIO.convert(tmpFile, "fasta", outputFile, "phylip-relaxed")
+        os.remove(tmpFile)
+        return outputFile
+    else:
+        prRed("Error while trying to align")
+        log = "The executed command was : \n" + str(muscle_cline) + "\n and the error code return was : " + str(rc) + "\n"
+        log += "Please check the log file for more infos, or try to execute the above command directly \n"
+        prRed(log)
+        log += "Output for error : \n" + str(stderr.read())
+        writeLog(log)
+        return outputFile
 
 # function getAlignementDict
 # this function will parth the alignement file to creat a dictionnary containing the alignement record
@@ -991,10 +1098,10 @@ def writeSingleRecordList(tmpFasta, listRec):
 # @param
 # fastaFile, name of the fasta file to parth
 # @taxonName, name of the taxon (seqId) to reverse
-def getReversedRecordList(fastaFile, taxonName):
+def getReversedRecordList(fastaFile, taxonToReverse):
     listRec = []
     for record in SeqIO.parse(fastaFile, "fasta"):
-                if record.id == taxonName:
+                if record.id in taxonToReverse:
                     rec = SeqRecord(record.seq.reverse_complement(), id=record.id, name=record.name, description="")
                 else:
                     rec = record
@@ -1012,7 +1119,6 @@ def getPDistMatrix(alignementFile):
     return calculator.get_distance(aln[0])
 
 
-
 # function checkMafftAlignement
 # this function check the alignement for the mafft program
 # it will check if the p-distance is > to a predefind value, and try to reverse the sequence, and realign the sequence to 
@@ -1022,6 +1128,69 @@ def getPDistMatrix(alignementFile):
 # @alignementPath, path to the alignement file are located, to read and write 
 # @pathToFasta, path where to read / write fasta 
 def checkMafftAlignement(alignementFile, alignementPath= settings ["sequenceAlignementResultPath"], pathToFasta = settings["genesFastaResultPath"], mafftLocation = settings["mafftPath"]):
+    print("alignement check initialised for mafft ")
+    dm = getMyPDistMatrix(alignementFile)
+    fastaFile = pathToFasta + alignementFile[alignementFile.rfind("/")+1:alignementFile.find("_")] + ".fasta"
+    tmpFasta = fastaFile[:-6] + "_tmp.fasta"
+    tmpAlignement = ""
+    listRec= []
+    prevValues = {}
+    taxonToRevers = []
+    taxonToKeep = []
+
+    for taxonName, pDistList in dm.items():
+        taxonPDist = sum (pDistList) / len(pDistList)
+        prevValues[taxonName]= taxonPDist
+        threshold = settings ["pDistThreshold"]["default"]
+        if taxonName in settings["pDistThreshold"]: threshold = settings["pDistThreshold"][taxonName]
+        if taxonPDist > threshold: taxonToRevers.append(taxonName)
+
+    if len(taxonToRevers) > 0:
+        print(taxonToRevers)
+        listRec = getReversedRecordList(fastaFile, taxonToRevers)
+        writeSingleRecordList(tmpFasta, listRec)
+        tmpAlignement = aligneSequenceWithMafft(tmpFasta, outputLocation=alignementPath, mafftLocation=mafftLocation)
+        dm2 = getMyPDistMatrix(tmpAlignement)
+        for taxonName, pDistList in dm.items():
+            taxonPDist = sum (pDistList) / len(pDistList)
+            if prevValues[taxonName] > taxonPDist  and taxonName in taxonToRevers:
+                print("pdist for " + taxonName+ " was " + str(prevValues[taxonName] )+ " and after reverse, it became "+ str(taxonPDist ))
+                taxonToKeep.append(taxonName)
+
+
+
+    if len(taxonToKeep) > 0:
+        print(taxonToKeep)
+        listRec = getReversedRecordList(fastaFile, taxonToKeep)
+        writeSingleRecordList(fastaFile, listRec)
+        finalAlignement = aligneSequenceWithMafft(fastaFile, outputLocation=alignementPath, mafftLocation=mafftLocation)
+        dm3 = getMyPDistMatrix(finalAlignement )
+        print("values of pdist after reversing and keeping the best sequence")
+        for taxonName, pDistList in dm.items():
+            taxonPDist = sum (pDistList) / len(pDistList)
+            if taxonName in taxonToKeep : print(taxonName + " : " + str(taxonPDist))
+            threshold = settings ["pDistThreshold"]["default"]
+            if taxonName in settings["pDistThreshold"]: threshold = settings["pDistThreshold"][taxonName]
+            if taxonPDist > threshold:
+                prRed("Warning : Even after reverse complement the taxon " + taxonName + " still have a p-distance > to the  defind threshold (" + str(threshold) + ") for the alignement file " + alignementFile)
+
+    if os.path.isfile(tmpFasta): os.remove(tmpFasta)
+    if os.path.isfile(tmpAlignement): os.remove(tmpAlignement)
+    print("alignementCheck finished")
+    
+            
+
+
+
+# function checkMafftAlignement
+# this function check the alignement for the mafft program
+# it will check if the p-distance is > to a predefind value, and try to reverse the sequence, and realign the sequence to 
+# check if it increase the alignement quality
+# @param
+# @alignementFile, alignement file to check
+# @alignementPath, path to the alignement file are located, to read and write 
+# @pathToFasta, path where to read / write fasta 
+def checkMafftAlignement2(alignementFile, alignementPath= settings ["sequenceAlignementResultPath"], pathToFasta = settings["genesFastaResultPath"], mafftLocation = settings["mafftPath"]):
     print("alignement check initialised for mafft ")
     dm = getPDistMatrix(alignementFile)
     fastaFile = pathToFasta + alignementFile[alignementFile.rfind("/")+1:alignementFile.find("_")] + ".fasta"
@@ -1067,35 +1236,55 @@ def checkMafftAlignement(alignementFile, alignementPath= settings ["sequenceAlig
 # @pathToFasta, path where to read / write fasta 
 def checkMuscleAlignement(alignementFile, alignementPath= settings ["sequenceAlignementResultPath"], pathToFasta = settings["genesFastaResultPath"], muscleLocation = settings["musclePath"]):
     print("alignement check initialised for muscle  ")
-    dm = getPDistMatrix(alignementFile)
+    dm = getMyPDistMatrix(alignementFile)
     fastaFile = pathToFasta + alignementFile[alignementFile.rfind("/")+1:alignementFile.find("_")] + ".fasta"
     tmpFasta = fastaFile[:-6] + "_tmp.fasta"
+    tmpAlignement = ""
     listRec= []
+    prevValues = {}
+    taxonToRevers = []
+    taxonToKeep = []
 
-    for i in range(len(dm.matrix)):
-        taxonName= dm.names[i]
-        prevPDist = dm.matrix[i][0]
-        if dm.matrix[i][0] > 0.5:
-            # print(dm.matrix[i][0])
-            listRec = getReversedRecordList(fastaFile, taxonName)
-            writeSingleRecordList(tmpFasta, listRec)
-            tmpAlignement = aligneSequenceWithMuscle(tmpFasta, outputLocation=alignementPath, muscleLocation=muscleLocation)
-            dm2 = getPDistMatrix(tmpAlignement)
-            for j in range(len(dm2.matrix)):
-                if dm2.names[j] == taxonName:
-                    if dm2.matrix[j][0] < prevPDist:
-                        os.remove(fastaFile)
-                        os.remove(alignementFile)
-                        os.rename(tmpFasta, fastaFile)
-                        os.rename(tmpAlignement, alignementFile)
-                        return  checkMuscleAlignement(alignementFile, alignementPath, pathToFasta , muscleLocation)
-                    else:
-                        os.remove(tmpFasta)
-                        os.remove(tmpAlignement)
+    for taxonName, pDistList in dm.items():
+        taxonPDist = sum (pDistList) / len(pDistList)
+        prevValues[taxonName]= taxonPDist
+        threshold = settings ["pDistThreshold"]["default"]
+        if taxonName in settings["pDistThreshold"]: threshold = settings["pDistThreshold"][taxonName]
+        if taxonPDist > threshold: taxonToRevers.append(taxonName)
 
+    if len(taxonToRevers) > 0:
+        print(taxonToRevers)
+        listRec = getReversedRecordList(fastaFile, taxonToRevers)
+        writeSingleRecordList(tmpFasta, listRec)
+        tmpAlignement = aligneSequenceWithMuscle(tmpFasta, outputLocation=alignementPath, muscleLocation=muscleLocation)
+        dm2 = getMyPDistMatrix(tmpAlignement)
+        for taxonName, pDistList in dm.items():
+            taxonPDist = sum (pDistList) / len(pDistList)
+            if prevValues[taxonName] > taxonPDist  and taxonName in taxonToRevers:
+                print("pdist for " + taxonName+ " was " + str(prevValues[taxonName] )+ " and after reverse, it became "+ str(taxonPDist ))
+                taxonToKeep.append(taxonName)
 
+    if len(taxonToKeep) > 0:
+        print(taxonToKeep)
+        listRec = getReversedRecordList(fastaFile, taxonToKeep)
+        writeSingleRecordList(fastaFile, listRec)
+        finalAlignement = aligneSequenceWithMuscle(fastaFile, outputLocation=alignementPath, muscleLocation=muscleLocation)
+        dm3 = getMyPDistMatrix(finalAlignement )
+        print("values of pdist after reversing and keeping the best sequence")
+        for taxonName, pDistList in dm.items():
+            taxonPDist = sum (pDistList) / len(pDistList)
+            if taxonName in taxonToKeep : print(taxonName + " : " + str(taxonPDist))
+            threshold = settings ["pDistThreshold"]["default"]
+            if taxonName in settings["pDistThreshold"]: threshold = settings["pDistThreshold"][taxonName]
+            if taxonPDist > threshold:
+                prRed("Warning : Even after reverse complement the taxon " + taxonName + " still have a p-distance > to the  defind threshold (" + str(threshold) + ") for the alignement file " + alignementFile)
+
+    if os.path.isfile(tmpFasta): os.remove(tmpFasta)
+    if os.path.isfile(tmpAlignement): os.remove(tmpAlignement)
     print("alignementCheck finished")
-    return
+
+
+
 
 
 
@@ -1137,6 +1326,7 @@ def run():
     for dir in os.listdir("./results"):
         for file in os.listdir("results/"+dir):
             os.remove("results/"+dir+"/"+file)
+
     mitogenomeDict = {}
     tExtraction = time.time()
     fastaFiles = getFASTAFiles()
@@ -1229,7 +1419,7 @@ def run():
 ################################################################################
 # initialisation of global variable and environement
 setup()
-geneDict = getGeneDict()
+geneDict = {}
 superpositionDict={}
 init() # to have color in the terminal
 
@@ -1241,11 +1431,14 @@ init() # to have color in the terminal
 # debug function
 # put what ever you want inside to debug
 def debug():
-    print(len(list(SeqIO.parse(settings ["genesFastaResultPath"] + "28S.fasta", "fasta"))))
-    for record in SeqIO.parse(settings ["genesFastaResultPath"] + "28S.fasta", "fasta"):
-        if record.id == "JM110": print(len(record.seq))
+    # print(len(list(SeqIO.parse(settings ["genesFastaResultPath"] + "28S.fasta", "fasta"))))
+    # for record in SeqIO.parse(settings ["genesFastaResultPath"] + "28S.fasta", "fasta"):
+        # if record.id == "JM110": print(len(record.seq))
 
-    # alignedFile = aligneSequenceWithMafft(settings ["genesFastaResultPath"] + "28S.fasta")
+    # alignedFile = aligneSequenceWithMafft(settings ["genesFastaResultPath"] + "18S.fasta")
+    # alignedFile = aligneSequenceWithMafft(settings ["genesFastaResultPath"] + "17S.fasta")
+    # alignedFile = aligneSequenceWithMuscle(settings ["genesFastaResultPath"] + "18S.fasta")
+    alignedFile = aligneSequenceWithMuscle(settings ["genesFastaResultPath"] + "17S.fasta")
     # if settings["checkAlignement"] : checkMafftAlignement(alignedFile)
     # correctGape(settings["sequenceAlignementResultPath"]+"28S_mafft_align.fasta")
     # AlignIO.convert(settings["sequenceAlignementResultPath"]+"28S_mafft_align.fasta", "fasta", settings["sequenceAlignementResultPath"]+"28S_mafft_align.phy", "phylip-relaxed")
@@ -1254,13 +1447,30 @@ def debug():
     # listRec = getReversedRecordList(settings["genesFastaResultPath"]+"28S.fasta", "JM110")
     # writeSingleRecordList(settings["genesFastaResultPath"]+"28S_tmp.fasta", listRec)
     # tmpAlignement = aligneSequenceWithMafft(settings["genesFastaResultPath"]+"28S_tmp.fasta")
-    dm = getPDistMatrix(settings["sequenceAlignementResultPath"]+"28S_mafft_align.phy")
-    dm2 = getPDistMatrix(settings["sequenceAlignementResultPath"]+"28S_tmp_mafft_align.phy")
+    t5 = time.time()
+    calculator = DistanceCalculator('identity')
+    dm = calculator.get_distance(AlignIO.read(settings["sequenceAlignementResultPath"]+"12S_mafft_align.phy", "phylip-relaxed"))
+    t6 = time.time()
+    t1 = time.time()
+    # dmTest= testEditDistance(AlignIO.read(settings["sequenceAlignementResultPath"]+"12S_mafft_align.phy", "phylip-relaxed"))
+    t2 = time.time()
+    t3 = time.time()
+    t4 = time.time()
+    # dm = getPDistMatrix(settings["sequenceAlignementResultPath"]+"12S_mafft_align.phy")
+    # dm2 = getPDistMatrix(settings["sequenceAlignementResultPath"]+"12S_tmp_mafft_align.phy")
+    prYellow("Matrix made with biopython function")
     for i in range(len(dm.matrix)):
-        if dm.names[i] == "JM110":
-            print(dm.matrix[i][0])
+            print(dm.names[i] + " : " + str(dm.matrix[i]))
+        
+    prYellow("matrix with hand made function")
+    # for k,v in dmTest.items() : print(k +" : "+ str(v))
+    # for k,v in dmTest2.items() : print(k +" : "+ str(v))
+    print(t6 - t5)
+    print(t2 - t1)
+    print(t4 - t3)
+    # for i in range(len(dm2.matrix)):
+        # print(dm2.matrix[i])
 
-    for i in range(len(dm2.matrix)):
-        if dm2.names[i] == "JM110": print(dm2.matrix[i][0])
+    
 
 # debug()
