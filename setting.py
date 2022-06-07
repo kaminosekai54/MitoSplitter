@@ -14,12 +14,12 @@ settings = {
 "nameColName" : "Name",
 "typeColName" : "Type",
 "useMuscle" : True,
-"useMuscleV3" : True,
+"useMuscleV3" : False,
 "muscleParameterValue":{
 "-maxiters ":10,
 "-maxmb ":400,
 },
-"useMafft" : True,
+"useMafft" : False,
 "checkAlignement" : True,
 "debugLog" : True,
 "geneToDetect":[
@@ -34,6 +34,7 @@ settings = {
     ],
     "pDistThreshold" :  {
         "default" : 0.5,
+        "12S" : 0.25,
     },
     "geneAlias":{
 "COX1":["COI"],

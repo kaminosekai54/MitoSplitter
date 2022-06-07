@@ -23,6 +23,7 @@ def main():
     if   settings["useMuscle"]:
         mitogenomeDict= getAlignedMitogenomeDict   ("muscle", path ="."+ settings["sequenceAlignementResultPath"])
         alignementDict= getAlignementDict("muscle", path ="."+ settings["sequenceAlignementResultPath"])
+        generatePDistSummary(mitogenomeDict, alignementDict, "muscle", pathToFile="."+ settings["sequenceAlignementResultPath"], csvPath="."+ settings["csvResultPath"])
         writeConcatenatedMatrix(alignementDict, mitogenomeDict, "muscle", destinationPath = "." + settings["sequenceAlignementResultPath"])
         generateDistanceTree("muscle", alignementLocation ="." + settings["sequenceAlignementResultPath"], outputLocation = "." + settings["treeResultPath"])
         tMuscleTree= time.time() - tMuscleTree
@@ -30,6 +31,7 @@ def main():
     if settings["useMafft"]:
         mitogenomeDict= getAlignedMitogenomeDict    ("mafft", path ="."+ settings["sequenceAlignementResultPath"])
         alignementDict= getAlignementDict("mafft", path ="."+ settings["sequenceAlignementResultPath"])
+        generatePDistSummary(mitogenomeDict, alignementDict, "mafft", pathToFile="."+ settings["sequenceAlignementResultPath"], csvPath="."+ settings["csvResultPath"])
         writeConcatenatedMatrix(alignementDict, mitogenomeDict, "mafft", destinationPath = "." + settings["sequenceAlignementResultPath"])
         generateDistanceTree("mafft",alignementLocation ="." + settings["sequenceAlignementResultPath"], outputLocation = "." + settings["treeResultPath"])
         tMafftTree = time.time() - tMafftTree
