@@ -1,5 +1,4 @@
 # Import
-from ctypes import alignment
 from setting import *
 import sys, os, platform, subprocess, re, time
 from datetime import datetime
@@ -785,17 +784,18 @@ def generateSuperpositionSummary(mitogenomeDict, csvPath= settings["csvResultPat
 # the simplified pdistance matrix for thhe alignement
 # @param
 # @alignementFile, the, the alignement file
-# def getMyPDistMatrix(alignementFile):
 def getMyPDistMatrix(alignementFile):
     matrix = {}
+    firstSeq = ""
     listRec = []
     for record in AlignIO.read(alignementFile, "phylip-relaxed"):
         matrix[record.id] = []
 
         distList = []
         listRec.append(str(record.seq))
-        for seq in listRec:
-            distList.append(getMyPDist(str(record.seq), seq)/len(seq))
+        # for seq in listRec:
+            # distList.append(getMyPDist(str(record.seq), seq)/len(seq))
+        distList.append(getMyPDist(str(record.seq), listRec[0])/len(listRec[0]))
         matrix[record.id] = distList
 
     return matrix
@@ -1366,7 +1366,7 @@ def run():
     tMuscleTree = time.time()
     tMafftTree = time.time()
     if   settings["useMuscle"]:
-        alignementDict= getAlignementDict("mafft")
+        alignementDict= getAlignementDict("muscle")
         generatePDistSummary(getAlignedMitogenomeDict("muscle"), alignementDict, "muscle")
         writeConcatenatedMatrix(alignementDict, mitogenomeDict, "muscle")
         generateDistanceTree("muscle")
@@ -1397,7 +1397,7 @@ def run():
 
 ################################################################################
 # initialisation of global variable and environement
-setup()
+# setup()
 geneDict = {}
 superpositionDict={}
 init() # to have color in the terminal
@@ -1410,9 +1410,9 @@ init() # to have color in the terminal
 # debug function
 # put what ever you want inside to debug
 def debug():
-    alignementDict= getAlignementDict("mafft")
-    
     # for record in SeqIO.parse(settings ["genesFastaResultPath"] + "12S.fasta", "fasta"):
+    # record = list(SeqIO.parse(settings ["genesFastaResultPath"] + "12S.fasta", "fasta"))
+    # print(len(record))
         # if "BL" in record.id :print(len(record.seq))
         # print(record.id + ":"+str(len(record.seq)))checkMu
         # checkMuscleAlignement(settings ["sequenceAlignementResultPath"] + "12S_muscle_align.phy")
@@ -1426,8 +1426,30 @@ def debug():
     # listRec = getReversedRecordList(settings ["genesFastaResultPath"] + "12S.fasta", taxonOfIntrest )
     # writeSingleRecordList(settings ["genesFastaResultPath"] + "12S_tmp.fasta", listRec)
     # aligneSequenceWithMuscle(settings ["genesFastaResultPath"] + "12S_tmp.fasta")
-    # correctGape(settings ["sequenceAlignementResultPath"] + "12S_tmp_muscle_align.fasta")
-    # AlignIO.convert(settings ["sequenceAlignementResultPath"] + "12S_tmp_muscle_align.fasta", "fasta", settings ["sequenceAlignementResultPath"] + "12S_tmp_muscle_align.phy", "phylip-relaxed")
+    # correctGape(settings ["sequenceAlignementResultPath"] + "12S_muscle_align.fasta")
+    # AlignIO.convert(settings ["sequenceAlignementResultPath"] + "12S_muscle_align.fasta", "fasta", settings ["sequenceAlignementResultPath"] + "12S_muscle_align.phy", "phylip-relaxed")
+    df=pd.read_csv(settings["csvResultPath"]+ "summary_presence.csv")
+    data= {}
+    geneList = []
+    geneCount=[]
+    print(len(df))
+    for gene in settings["geneToDetect"]:
+        if gene in df:
+            if not gene in geneList:
+                geneList.append(gene)
+                geneCount.append(df[gene].sum())
+
+            # if not gene in data.keys(): data[gene] = []
+            # data[gene].append(df[gene].sum())
+
+    print(data)
+    # sumdf = pd.DataFrame.from_dict(data)
+    sumdf = pd.DataFrame.from_dict({"gene_name":geneList, "speces_count":geneCount})
+    sumdf.to_csv("tmp.csv", index= False, sep=";")
+    print(sumdf)
+
+    # alignementDict= getAlignementDict("muscle")
+    # generatePDistSummary(getAlignedMitogenomeDict("muscle"), alignementDict, "muscle")
     # dm = getMyPDistMatrix(settings ["sequenceAlignementResultPath"] + "12S_muscle_align.phy")
     # dm2 = getMyPDistMatrix(settings ["sequenceAlignementResultPath"] + "12S_tmp_muscle_align.phy")
 
