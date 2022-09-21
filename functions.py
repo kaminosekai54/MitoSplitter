@@ -841,22 +841,26 @@ def aligneSequenceWithMuscleV3(fasta, outputLocation = settings["sequenceAlignem
             muscle_cline += " " + str(k) + " " + str(v)
 
     if settings["debugLog"] : print("Commande : \n" + muscle_cline)
-    child= subprocess.Popen(str(muscle_cline), stdout = subprocess.PIPE, stderr=subprocess.PIPE,          shell = (sys.platform!="win32"))
-    child.wait()
-    rc= child.returncode
-    stdout = child.stdout
-    stderr = child.stderr
-    if rc == 0:
+    # child= subprocess.Popen(str(muscle_cline), stdout = subprocess.PIPE, stderr=subprocess.PIPE,          shell = (sys.platform!="win32"))
+    try:
+        child= subprocess.check_output(str(muscle_cline), text=True)
+    # child.wait()
+    # rc= child.returncode
+    # stdout = child.stdout
+    # stderr = child.stderr
+    # if rc == 0:
         correctGape(tmpFile)
         AlignIO.convert(tmpFile, "fasta", outputFile, "phylip-relaxed")
         os.remove(tmpFile)
         return outputFile
-    else:
+    # else:
+    except subprocess.CalledProcessError as error: 
+
         prRed("Error while trying to align")
-        log = "The executed command was : \n" + str(muscle_cline) + "\n and the error code return was : " + str(rc) + "\n"
+        log = "The executed command was : \n" + str(muscle_cline) + "\n and the error code return was : " + str(error.returncode) + "\n"
         log += "Please check the log file for more infos, or try to execute the above command directly \n"
         prRed(log)
-        log += "Output for error : \n" + str(stderr.read())
+        log += "Output for error : \n" + str(error.output)
         writeLog(log)
         return outputFile
 
@@ -888,22 +892,25 @@ def aligneSequenceWithMuscle(fasta, outputLocation = settings["sequenceAlignemen
 
     muscle_cline= muscleEXE + " -align " + os.path.abspath(fasta) + " -output " + os.path.abspath(tmpFile)
     if settings["debugLog"] : print("Commande : \n" + muscle_cline)
-    child= subprocess.Popen(str(muscle_cline), stdout = subprocess.PIPE, stderr=subprocess.PIPE,          shell = (sys.platform!="win32"))
-    child.wait()
-    rc= child.returncode
-    stdout = child.stdout
-    stderr = child.stderr
-    if rc == 0:
+    # child= subprocess.Popen(str(muscle_cline), stdout = subprocess.PIPE, stderr=subprocess.PIPE,          shell = (sys.platform!="win32"))
+    try:
+        child= subprocess.check_output(str(muscle_cline), text=True)
+    # child.wait()
+    # rc= child.returncode
+    # stdout = child.stdout
+    # stderr = child.stderr
+    # if rc == 0:
         correctGape(tmpFile)
         AlignIO.convert(tmpFile, "fasta", outputFile, "phylip-relaxed")
         os.remove(tmpFile)
         return outputFile
-    else:
+    # else:
+    except subprocess.CalledProcessError as error:
         prRed("Error while trying to align")
-        log = "The executed command was : \n" + str(muscle_cline) + "\n and the error code return was : " + str(rc) + "\n"
+        log = "The executed command was : \n" + str(muscle_cline) + "\n and the error code return was : " + str(error.returncode) + "\n"
         log += "Please check the log file for more infos, or try to execute the above command directly \n"
         prRed(log)
-        log += "Output for error : \n" + str(stderr.read())
+        log += "Output for error : \n" + str(error.output)
         writeLog(log)
         return outputFile
 
@@ -937,22 +944,25 @@ def aligneSequenceWithMafft(fasta, outputLocation = settings["sequenceAlignement
         mafft_cline= os.path.abspath(mafftEXE) + " --auto --out "+ os.path.abspath(tmpFile) + " " + os.path.abspath(fasta)
 
     if settings["debugLog"] : print("Commande : \n" + mafft_cline)
-    child= subprocess.Popen(str(mafft_cline), stdout = subprocess.PIPE, stderr=subprocess.PIPE,          shell = (sys.platform!="win32"))
-    child.wait()
-    rc= child.returncode
-    stdout = child.stdout
-    stderr = child.stderr
-    if rc == 0 and not "fatal:" in str(stderr.readline()) and os.path.isfile(tmpFile):
+    # child= subprocess.Popen(str(mafft_cline), stdout = subprocess.PIPE, stderr=subprocess.PIPE,          shell = (sys.platform!="win32"))
+    try:
+        child= subprocess.check_output(str(mafft_cline), text=True)
+    # child.wait()
+    # rc= child.returncode
+    # stdout = child.stdout
+    # stderr = child.stderr
+    # if rc == 0 and not "fatal:" in str(stderr.readline()) and os.path.isfile(tmpFile):
         correctGape(tmpFile)
         AlignIO.convert(tmpFile, "fasta", outputFile, "phylip-relaxed")
         os.remove(tmpFile)
         return outputFile
-    else:
+    # else:
+    except subprocess.CalledProcessError as error:
         prRed("Error while trying to align")
-        log = "The executed command was : \n" + str(muscle_cline) + "\n and the error code return was : " + str(rc) + "\n"
+        log = "The executed command was : \n" + str(muscle_cline) + "\n and the error code return was : " + str(error.returncode) + "\n"
         log += "Please check the log file for more infos, or try to execute the above command directly \n"
         prRed(log)
-        log += "Output for error : \n" + str(stderr.read())
+        log += "Output for error : \n" + str(error.output)
         writeLog(log)
         return outputFile
 
@@ -1444,7 +1454,7 @@ def debug():
 
     print(data)
     # sumdf = pd.DataFrame.from_dict(data)
-    sumdf = pd.DataFrame.from_dict({"gene_name":geneList, "speces_count":geneCount})
+    sumdf = pd.DataFrame.from_dict({"gene_name":geneList, "species_count":geneCount})
     sumdf.to_csv("tmp.csv", index= False, sep=";")
     print(sumdf)
 
@@ -1473,4 +1483,4 @@ def debug():
 
     
 
-# debug()
+debug()
